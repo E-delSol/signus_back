@@ -1,10 +1,10 @@
 package com.pecadoartesano
 
-import com.pecadoartesano.database.configureDatabase
-import com.pecadoartesano.plugins.configureMonitoring
-import com.pecadoartesano.plugins.configureRouting
-import com.pecadoartesano.plugins.configureSecurity
-import com.pecadoartesano.plugins.configureSerialization
+import com.pecadoartesano.core.database.configureDatabase
+import com.pecadoartesano.core.plugins.configureMonitoring
+import com.pecadoartesano.core.plugins.configureRouting
+import com.pecadoartesano.core.plugins.configureSecurity
+import com.pecadoartesano.core.plugins.configureSerialization
 import io.ktor.server.application.*
 
 fun main(args: Array<String>) {

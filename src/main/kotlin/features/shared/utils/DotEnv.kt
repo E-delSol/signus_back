@@ -1,4 +1,4 @@
-package com.pecadoartesano.utils
+package com.pecadoartesano.features.shared.utils
 
 import io.github.cdimascio.dotenv.Dotenv
 import io.github.cdimascio.dotenv.dotenv

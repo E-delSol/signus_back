@@ -1,6 +1,6 @@
-package com.pecadoartesano.config
+package com.pecadoartesano.core.config
 
-import com.pecadoartesano.utils.DotEnv
+import com.pecadoartesano.features.shared.utils.DotEnv
 
 object DotEnvConfig {
     // Database configuration

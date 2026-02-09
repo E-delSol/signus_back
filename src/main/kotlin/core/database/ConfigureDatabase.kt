@@ -1,6 +1,6 @@
-package com.pecadoartesano.database
+package com.pecadoartesano.core.database
 
-import com.pecadoartesano.config.DotEnvConfig
+import com.pecadoartesano.core.config.DotEnvConfig
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import javax.sql.DataSource

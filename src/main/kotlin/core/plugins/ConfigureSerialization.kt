@@ -1,4 +1,4 @@
-package com.pecadoartesano.plugins
+package com.pecadoartesano.core.plugins
 
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*

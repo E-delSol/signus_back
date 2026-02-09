@@ -1,4 +1,4 @@
-package com.pecadoartesano.plugins
+package com.pecadoartesano.core.plugins
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
