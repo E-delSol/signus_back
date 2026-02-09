@@ -1,4 +1,4 @@
-package com.pecadoartesano.models
+package com.pecadoartesano.features.semaphore
 
 import kotlinx.serialization.Serializable
 

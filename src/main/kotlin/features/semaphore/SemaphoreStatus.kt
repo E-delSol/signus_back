@@ -1,4 +1,4 @@
-package com.pecadoartesano.models
+package com.pecadoartesano.features.semaphore
 
 enum class SemaphoreStatus{
     AVAILABLE,  // Verde
