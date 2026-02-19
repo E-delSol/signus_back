@@ -1,5 +1,7 @@
 package com.pecadoartesano.features.auth
 
+import com.pecadoartesano.core.exceptions.EmailAlreadyExistsException
+import com.pecadoartesano.features.auth.dto.AuthService
 import com.pecadoartesano.features.auth.dto.LoginRequest
 import com.pecadoartesano.features.auth.dto.RegisterRequest
 import com.pecadoartesano.features.auth.dto.TokenResponse
@@ -16,6 +18,7 @@ fun Route.authRoutes( authService: AuthService) {
         // User registration endpoint
         post("/register") {
             val request = call.receive<RegisterRequest>()
+            println(request)
 
             try {
                 val token = authService.register(
@@ -24,12 +27,18 @@ fun Route.authRoutes( authService: AuthService) {
                     displayName = request.displayName
                 )
 
-                call.respond(HttpStatusCode.OK, TokenResponse(accessToken = token))
+                call.respond(HttpStatusCode.Created, TokenResponse(accessToken = token))
 
             } catch (e: IllegalArgumentException) {
+                print("error 1 -->")
+                e.printStackTrace()
                 call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
             } catch (e: Exception) {
+                print("error 2 -->")
                 call.respond(HttpStatusCode.Conflict, mapOf("error" to "An unexpected error occurred"))
+            } catch (e: EmailAlreadyExistsException) {
+                print("error 3 -->")
+                call.respond(HttpStatusCode.Conflict, mapOf("error" to e.message))
             }
 
         }
