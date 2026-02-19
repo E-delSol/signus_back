@@ -1,28 +1,32 @@
 package com.pecadoartesano.features.auth
 
+import com.pecadoartesano.core.exceptions.EmailAlreadyExistsException
 import com.pecadoartesano.core.security.JwtService
 import com.pecadoartesano.core.security.PasswordService
+import com.pecadoartesano.features.auth.dto.AuthService
 import com.pecadoartesano.features.user.User
 import com.pecadoartesano.features.user.UserRepository
 import java.util.UUID
 
-class AuthService(
+class AuthServiceImpl(
     private val userRepository: UserRepository,
     private val passwordService: PasswordService,
     private val jwtService: JwtService
-) {
-    fun register(
+) : AuthService {
+    override fun register(
         email: String,
         rawPassword: String,
-        displayName: String? = null
+        displayName: String?
     ): String {
 
         if (email.isBlank() || rawPassword.isBlank()) {
-            error("Email and password must not be blank.")
+            print("Campo en blanco --> Email: '$email', Password: '$rawPassword'")
+            throw IllegalArgumentException("Email and password must not be blank.")
         }
 
         if (userRepository.findByEmail(email) != null) {
-            throw IllegalArgumentException("Email already exists.")
+            print("Email existente --> User: '$email' already exists.")
+            throw EmailAlreadyExistsException("Email already exists.")
         }
 
         val user = User(
@@ -38,7 +42,7 @@ class AuthService(
         return jwtService.generateToken(user)
     }
 
-    fun login(email: String, rawPassword: String): String {
+    override fun login(email: String, rawPassword: String): String {
         val user = userRepository.findByEmail(email)
             ?: throw IllegalArgumentException("Invalid email or password.")
 

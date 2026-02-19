@@ -1,23 +1,26 @@
 package com.pecadoartesano.core.database
 
-import com.pecadoartesano.core.config.DotEnvConfig
+import com.pecadoartesano.core.config.DatabaseConfig
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import javax.sql.DataSource
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.jdbc.Database
+import javax.sql.DataSource
 
-fun configureDatabase() {
-    initDB()
+fun configureDatabase(databaseConfig: DatabaseConfig) {
+    initDB(databaseConfig)
 }
 
-private fun initDB() {
+private fun initDB(config: DatabaseConfig) {
 
     val config = HikariConfig().apply {
         driverClassName = "org.postgresql.Driver"
-        jdbcUrl = "jdbc:postgresql://${DotEnvConfig.dbHost}:${DotEnvConfig.dbPort}/${DotEnvConfig.dbName}"
-        username = DotEnvConfig.dbUser
-        password = DotEnvConfig.dbPassword
+        jdbcUrl = "jdbc:postgresql://${config.host}:${config.port}/${config.name}"
+        username = config.user
+        password = config.password
+        maximumPoolSize = 10
+        isAutoCommit = false
+        transactionIsolation = "TRANSACTION_REPEATABLE_READ"
     }
 
     HikariDataSource(config).also { dataSource ->
