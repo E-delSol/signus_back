@@ -14,10 +14,12 @@ import com.pecadoartesano.features.auth.dto.AuthService
 import com.pecadoartesano.features.notification.NotificationOrchestrator
 import com.pecadoartesano.features.notification.RealtimeNotificationService
 import com.pecadoartesano.features.notification.providers.FcmPushProvider
+import com.pecadoartesano.features.notification.routes.notificationSocketRoutes
 import com.pecadoartesano.features.semaphore.SemaphoreRepository
 import com.pecadoartesano.features.semaphore.StatusService
 import com.pecadoartesano.features.user.UserRepository
 import io.ktor.server.application.Application
+import io.ktor.server.routing.routing
 
 fun main(args: Array<String>) {
     io.ktor.server.netty.EngineMain.main(args)
@@ -53,6 +55,10 @@ fun Application.module() {
     )
 
     configureSecurity(appConfig.jwt)
-    configureSockets(appConfig.jwt, realtimeNotificationService)
+    configureSockets()
     configureRouting(authService, statusService)
+
+    routing {
+        notificationSocketRoutes(appConfig.jwt, realtimeNotificationService)
+    }
 }
