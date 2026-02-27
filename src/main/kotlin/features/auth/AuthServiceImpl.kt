@@ -4,12 +4,12 @@ import com.pecadoartesano.core.exceptions.EmailAlreadyExistsException
 import com.pecadoartesano.core.security.JwtService
 import com.pecadoartesano.core.security.PasswordService
 import com.pecadoartesano.features.auth.dto.AuthService
+import com.pecadoartesano.features.auth.ports.AuthUserRepositoryPort
 import com.pecadoartesano.features.user.User
-import com.pecadoartesano.features.user.UserRepository
 import java.util.UUID
 
 class AuthServiceImpl(
-    private val userRepository: UserRepository,
+    private val userRepository: AuthUserRepositoryPort,
     private val passwordService: PasswordService,
     private val jwtService: JwtService
 ) : AuthService {

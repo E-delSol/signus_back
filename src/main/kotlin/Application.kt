@@ -2,63 +2,46 @@ package com.pecadoartesano
 
 import com.pecadoartesano.core.config.loadConfig
 import com.pecadoartesano.core.database.configureDatabase
+import com.pecadoartesano.core.plugins.configureDI
 import com.pecadoartesano.core.plugins.configureMonitoring
 import com.pecadoartesano.core.plugins.configureRouting
 import com.pecadoartesano.core.plugins.configureSecurity
 import com.pecadoartesano.core.plugins.configureSerialization
 import com.pecadoartesano.core.plugins.configureSockets
-import com.pecadoartesano.core.security.JwtService
-import com.pecadoartesano.core.security.PasswordService
-import com.pecadoartesano.features.auth.AuthServiceImpl
+import com.pecadoartesano.core.config.AppConfig
 import com.pecadoartesano.features.auth.dto.AuthService
-import com.pecadoartesano.features.notification.NotificationOrchestrator
-import com.pecadoartesano.features.notification.RealtimeNotificationService
-import com.pecadoartesano.features.notification.providers.FcmPushProvider
-import com.pecadoartesano.features.notification.routes.notificationSocketRoutes
-import com.pecadoartesano.features.semaphore.SemaphoreRepository
+import com.pecadoartesano.features.notification.dto.RealtimeNotificationService
 import com.pecadoartesano.features.semaphore.StatusService
-import com.pecadoartesano.features.user.UserRepository
 import io.ktor.server.application.Application
-import io.ktor.server.routing.routing
+import org.koin.core.module.Module
+import org.koin.ktor.ext.get
 
 fun main(args: Array<String>) {
     io.ktor.server.netty.EngineMain.main(args)
 }
 
 fun Application.module() {
-    val appConfig = loadConfig()
+    configureApp(loadConfig())
+}
+
+internal fun Application.configureApp(
+    appConfig: AppConfig,
+    startDatabase: Boolean = true,
+    overrideModules: List<Module> = emptyList()
+) {
 
     configureMonitoring()
     configureSerialization()
-    configureDatabase(appConfig.database)
+    if (startDatabase) {
+        configureDatabase(appConfig.database)
+    }
+    configureDI(appConfig, overrideModules)
 
-    val userRepository = UserRepository()
-    val jwtService = JwtService(appConfig.jwt)
-
-    val authService: AuthService = AuthServiceImpl(
-        userRepository = userRepository,
-        passwordService = PasswordService(),
-        jwtService = jwtService
-    )
-
-    val realtimeNotificationService = RealtimeNotificationService()
-    val pushProvider = FcmPushProvider(serverKey = appConfig.fcm.serverKey)
-    val notificationOrchestrator = NotificationOrchestrator(
-        userRepository = userRepository,
-        realtimeNotificationService = realtimeNotificationService,
-        pushProvider = pushProvider
-    )
-
-    val statusService = StatusService(
-        semaphoreRepository = SemaphoreRepository(),
-        notificationOrchestrator = notificationOrchestrator
-    )
+    val authService: AuthService = get()
+    val statusService: StatusService = get()
+    val realtimeNotificationService: RealtimeNotificationService = get()
 
     configureSecurity(appConfig.jwt)
     configureSockets()
-    configureRouting(authService, statusService)
-
-    routing {
-        notificationSocketRoutes(appConfig.jwt, realtimeNotificationService)
-    }
+    configureRouting(authService, statusService, appConfig.jwt, realtimeNotificationService)
 }

@@ -5,16 +5,19 @@ import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import com.pecadoartesano.configureApp
+import support.testAppConfig
 
 class ApplicationTest {
 
     @Test
-    fun testRoot() = testApplication {
+    fun testApplicationBootstrapsWithTestConfig() = testApplication {
+        val appConfig = testAppConfig()
         application {
-            module()
+            configureApp(appConfig = appConfig, startDatabase = false)
         }
         client.get("/").apply {
-            assertEquals(HttpStatusCode.OK, status)
+            assertEquals(HttpStatusCode.NotFound, status)
         }
     }
 
