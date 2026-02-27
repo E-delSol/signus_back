@@ -11,14 +11,18 @@ import support.testAppConfig
 class ApplicationTest {
 
     @Test
-    fun testApplicationBootstrapsWithTestConfig() = testApplication {
+    fun `given test config when application starts then responds not found on root`() = testApplication {
+        // Given
         val appConfig = testAppConfig()
         application {
             configureApp(appConfig = appConfig, startDatabase = false)
         }
-        client.get("/").apply {
-            assertEquals(HttpStatusCode.NotFound, status)
-        }
+
+        // When
+        val response = client.get("/")
+
+        // Then
+        assertEquals(HttpStatusCode.NotFound, response.status)
     }
 
 }

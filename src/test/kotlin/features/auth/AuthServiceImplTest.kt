@@ -22,7 +22,10 @@ class AuthServiceImplTest {
     private val authService = AuthServiceImpl(userRepository, passwordService, jwtService)
 
     @Test
-    fun `register throws when email or password is blank`() {
+    fun `given blank email and password when register then throws and does not create user`() {
+        // Given
+
+        // When / Then
         assertFailsWith<IllegalArgumentException> {
             authService.register(email = "", rawPassword = "", displayName = null)
         }
@@ -31,9 +34,35 @@ class AuthServiceImplTest {
     }
 
     @Test
-    fun `register throws when email already exists`() {
+    fun `given blank email when register then throws and does not create user`() {
+        // Given
+
+        // When / Then
+        assertFailsWith<IllegalArgumentException> {
+            authService.register(email = "", rawPassword = "secret", displayName = null)
+        }
+
+        verify(exactly = 0) { userRepository.create(any()) }
+    }
+
+    @Test
+    fun `given blank password when register then throws and does not create user`() {
+        // Given
+
+        // When / Then
+        assertFailsWith<IllegalArgumentException> {
+            authService.register(email = "user@test.com", rawPassword = "", displayName = null)
+        }
+
+        verify(exactly = 0) { userRepository.create(any()) }
+    }
+
+    @Test
+    fun `given existing email when register then throws and does not create user`() {
+        // Given
         every { userRepository.findByEmail("existing@test.com") } returns testUser()
 
+        // When / Then
         assertFailsWith<EmailAlreadyExistsException> {
             authService.register(
                 email = "existing@test.com",
@@ -46,18 +75,21 @@ class AuthServiceImplTest {
     }
 
     @Test
-    fun `register creates user and returns token`() {
+    fun `given valid data when register then creates user and returns token`() {
+        // Given
         every { userRepository.findByEmail("new@test.com") } returns null
         every { passwordService.hash("secret") } returns "hashed-secret"
         every { userRepository.create(any()) } answers { firstArg() }
         every { jwtService.generateToken(any()) } returns "token-123"
 
+        // When
         val result = authService.register(
             email = "new@test.com",
             rawPassword = "secret",
             displayName = "New User"
         )
 
+        // Then
         val userSlot = slot<User>()
         verify(exactly = 1) { userRepository.create(capture(userSlot)) }
         assertNotNull(userSlot.captured.id)
@@ -68,34 +100,41 @@ class AuthServiceImplTest {
     }
 
     @Test
-    fun `login throws when user does not exist`() {
+    fun `given missing user when login then throws`() {
+        // Given
         every { userRepository.findByEmail("missing@test.com") } returns null
 
+        // When / Then
         assertFailsWith<IllegalArgumentException> {
             authService.login(email = "missing@test.com", rawPassword = "secret")
         }
     }
 
     @Test
-    fun `login throws when password is invalid`() {
+    fun `given invalid password when login then throws`() {
+        // Given
         val user = testUser(email = "user@test.com", passwordHash = "stored-hash")
         every { userRepository.findByEmail("user@test.com") } returns user
         every { passwordService.verify("secret", "stored-hash") } returns false
 
+        // When / Then
         assertFailsWith<IllegalArgumentException> {
             authService.login(email = "user@test.com", rawPassword = "secret")
         }
     }
 
     @Test
-    fun `login returns token when credentials are valid`() {
+    fun `given valid credentials when login then returns token`() {
+        // Given
         val user = testUser(email = "user@test.com", passwordHash = "stored-hash")
         every { userRepository.findByEmail("user@test.com") } returns user
         every { passwordService.verify("secret", "stored-hash") } returns true
         every { jwtService.generateToken(user) } returns "token-ok"
 
+        // When
         val result = authService.login(email = "user@test.com", rawPassword = "secret")
 
+        // Then
         assertEquals("token-ok", result)
     }
 

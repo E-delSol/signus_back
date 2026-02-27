@@ -11,12 +11,14 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import support.createJwtToken
+import support.createJwtTokenWithInvalidSignature
 import support.testAppConfig
 
 class NotificationSocketRoutesIntegrationTest {
 
     @Test
-    fun `websocket closes with violated policy when token is missing`() = testApplication {
+    fun `given missing token when websocket connects then closes with violated policy`() = testApplication {
+        // Given
         val appConfig = testAppConfig()
         application {
             configureApp(appConfig = appConfig, startDatabase = false)
@@ -26,12 +28,14 @@ class NotificationSocketRoutesIntegrationTest {
             install(WebSockets)
         }
 
+        // When
         val session = wsClient.webSocketSession {
             url {
                 takeFrom("ws://localhost/ws")
             }
         }
 
+        // Then
         val closeReason = session.closeReason.await()
         assertNotNull(closeReason)
         assertEquals(CloseReason.Codes.VIOLATED_POLICY.code, closeReason.code)
@@ -39,7 +43,8 @@ class NotificationSocketRoutesIntegrationTest {
     }
 
     @Test
-    fun `websocket connects with valid token`() = testApplication {
+    fun `given valid token when websocket connects then session is established`() = testApplication {
+        // Given
         val appConfig = testAppConfig()
         application {
             configureApp(appConfig = appConfig, startDatabase = false)
@@ -49,6 +54,7 @@ class NotificationSocketRoutesIntegrationTest {
             install(WebSockets)
         }
 
+        // When
         val token = createJwtToken("user-1", appConfig.jwt)
         val session = wsClient.webSocketSession {
             url {
@@ -57,8 +63,37 @@ class NotificationSocketRoutesIntegrationTest {
             }
         }
 
+        // Then
         session.close()
         val closeReason = session.closeReason.await()
         assertNotNull(closeReason)
+    }
+
+    @Test
+    fun `given invalid token when websocket connects then closes with violated policy`() = testApplication {
+        // Given
+        val appConfig = testAppConfig()
+        application {
+            configureApp(appConfig = appConfig, startDatabase = false)
+        }
+
+        val wsClient = client.config {
+            install(WebSockets)
+        }
+
+        // When
+        val token = createJwtTokenWithInvalidSignature("user-1", appConfig.jwt)
+        val session = wsClient.webSocketSession {
+            url {
+                takeFrom("ws://localhost/ws")
+                parameters.append("token", token)
+            }
+        }
+
+        // Then
+        val closeReason = session.closeReason.await()
+        assertNotNull(closeReason)
+        assertEquals(CloseReason.Codes.VIOLATED_POLICY.code, closeReason.code)
+        assertEquals("Invalid JWT token", closeReason.message)
     }
 }

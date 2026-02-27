@@ -20,17 +20,21 @@ class NotificationOrchestratorTest {
     private val orchestrator = NotificationOrchestrator(partnerLookup, realtimeNotificationService, pushProvider)
 
     @Test
-    fun `does nothing when sender has no partner`() = runTest {
+    fun `given sender without partner when notify then does nothing`() = runTest {
+        // Given
         every { partnerLookup.findPartnerByUserId("sender-1") } returns null
 
+        // When
         orchestrator.notifyPartnerAboutStatusChange("sender-1", SemaphoreStatus.AVAILABLE)
 
+        // Then
         coVerify(exactly = 0) { realtimeNotificationService.notifyPartnerStatusChanged(any(), any()) }
         coVerify(exactly = 0) { pushProvider.sendPush(any(), any(), any(), any()) }
     }
 
     @Test
-    fun `sends realtime notification when partner is connected`() = runTest {
+    fun `given partner connected when notify then sends realtime notification only`() = runTest {
+        // Given
         val partner = partner(id = "partner-1", token = "fcm-token")
         every { partnerLookup.findPartnerByUserId("sender-1") } returns partner
         coEvery {
@@ -40,8 +44,10 @@ class NotificationOrchestratorTest {
             )
         } returns true
 
+        // When
         orchestrator.notifyPartnerAboutStatusChange("sender-1", SemaphoreStatus.BUSY)
 
+        // Then
         coVerify(exactly = 1) {
             realtimeNotificationService.notifyPartnerStatusChanged(
                 "partner-1",
@@ -56,14 +62,17 @@ class NotificationOrchestratorTest {
     }
 
     @Test
-    fun `falls back to push when realtime delivery fails and partner has fcm token`() = runTest {
+    fun `given realtime fails and partner has token when notify then sends push`() = runTest {
+        // Given
         val partner = partner(id = "partner-1", token = "fcm-token")
         every { partnerLookup.findPartnerByUserId("sender-1") } returns partner
         coEvery { realtimeNotificationService.notifyPartnerStatusChanged("partner-1", any()) } returns false
         coEvery { pushProvider.sendPush("partner-1", "fcm-token", any(), any()) } returns true
 
+        // When
         orchestrator.notifyPartnerAboutStatusChange("sender-1", SemaphoreStatus.OFFLINE)
 
+        // Then
         coVerify(exactly = 1) {
             pushProvider.sendPush(
                 targetUserId = "partner-1",
@@ -75,13 +84,40 @@ class NotificationOrchestratorTest {
     }
 
     @Test
-    fun `does not send push when realtime fails and partner has no token`() = runTest {
+    fun `given realtime succeeds and partner has token when notify then does not send push`() = runTest {
+        // Given
+        val partner = partner(id = "partner-1", token = "fcm-token")
+        every { partnerLookup.findPartnerByUserId("sender-1") } returns partner
+        coEvery { realtimeNotificationService.notifyPartnerStatusChanged("partner-1", any()) } returns true
+
+        // When
+        orchestrator.notifyPartnerAboutStatusChange("sender-1", SemaphoreStatus.AVAILABLE)
+
+        // Then
+        coVerify(exactly = 1) {
+            realtimeNotificationService.notifyPartnerStatusChanged(
+                "partner-1",
+                PartnerStatusChangedEvent(
+                    senderId = "sender-1",
+                    partnerId = "partner-1",
+                    status = SemaphoreStatus.AVAILABLE
+                )
+            )
+        }
+        coVerify(exactly = 0) { pushProvider.sendPush(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `given realtime fails and partner has no token when notify then does not send push`() = runTest {
+        // Given
         val partner = partner(id = "partner-1", token = null)
         every { partnerLookup.findPartnerByUserId("sender-1") } returns partner
         coEvery { realtimeNotificationService.notifyPartnerStatusChanged("partner-1", any()) } returns false
 
+        // When
         orchestrator.notifyPartnerAboutStatusChange("sender-1", SemaphoreStatus.OFFLINE)
 
+        // Then
         coVerify(exactly = 0) { pushProvider.sendPush(any(), any(), any(), any()) }
     }
 

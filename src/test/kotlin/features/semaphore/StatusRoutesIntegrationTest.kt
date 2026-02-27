@@ -19,12 +19,17 @@ import org.koin.dsl.module as koinModule
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import support.createJwtToken
+import support.createExpiredJwtToken
+import support.createJwtTokenWithInvalidSignature
+import support.createJwtTokenWithoutUserId
+import support.decodeJson
 import support.testAppConfig
 
 class StatusRoutesIntegrationTest {
 
     @Test
-    fun `patch status returns ok when token is valid`() = testApplication {
+    fun `given valid token when patch status then returns ok with updated status`() = testApplication {
+        // Given
         val appConfig = testAppConfig()
         val statusService = mockk<StatusService>()
         val expected = Semaphore(
@@ -47,6 +52,7 @@ class StatusRoutesIntegrationTest {
             )
         }
 
+        // When
         val token = createJwtToken("user-1", appConfig.jwt)
         val response = client.patch("/status") {
             header(HttpHeaders.Authorization, "Bearer $token")
@@ -54,22 +60,88 @@ class StatusRoutesIntegrationTest {
             setBody("""{"status":"BUSY"}""")
         }
 
+        // Then
         assertEquals(HttpStatusCode.OK, response.status)
-        assertEquals(true, response.bodyAsText().contains("BUSY"))
+        val body = decodeJson<Semaphore>(response.bodyAsText())
+        assertEquals(SemaphoreStatus.BUSY, body.status)
+        assertEquals("user-1", body.userId)
     }
 
     @Test
-    fun `patch status returns unauthorized without token`() = testApplication {
+    fun `given missing token when patch status then returns unauthorized`() = testApplication {
+        // Given
         val appConfig = testAppConfig()
         application {
             configureApp(appConfig = appConfig, startDatabase = false)
         }
 
+        // When
         val response = client.patch("/status") {
             contentType(ContentType.Application.Json)
             setBody("""{"status":"BUSY"}""")
         }
 
+        // Then
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
+
+    @Test
+    fun `given invalid token when patch status then returns unauthorized`() = testApplication {
+        // Given
+        val appConfig = testAppConfig()
+        application {
+            configureApp(appConfig = appConfig, startDatabase = false)
+        }
+
+        // When
+        val token = createJwtTokenWithInvalidSignature("user-1", appConfig.jwt)
+        val response = client.patch("/status") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody("""{"status":"BUSY"}""")
+        }
+
+        // Then
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
+
+    @Test
+    fun `given expired token when patch status then returns unauthorized`() = testApplication {
+        // Given
+        val appConfig = testAppConfig()
+        application {
+            configureApp(appConfig = appConfig, startDatabase = false)
+        }
+
+        // When
+        val token = createExpiredJwtToken("user-1", appConfig.jwt)
+        val response = client.patch("/status") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody("""{"status":"BUSY"}""")
+        }
+
+        // Then
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
+
+    @Test
+    fun `given token without userId claim when patch status then returns unauthorized`() = testApplication {
+        // Given
+        val appConfig = testAppConfig()
+        application {
+            configureApp(appConfig = appConfig, startDatabase = false)
+        }
+
+        // When
+        val token = createJwtTokenWithoutUserId(appConfig.jwt)
+        val response = client.patch("/status") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody("""{"status":"BUSY"}""")
+        }
+
+        // Then
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
 }
