@@ -20,7 +20,8 @@ class UserRepositoryIntegrationTest {
     }
 
     @Test
-    fun `create persists user and can be found by email`() {
+    fun `given new user when create then user can be found by email`() {
+        // Given
         val user = User(
             id = "user-1",
             email = "user1@test.com",
@@ -29,16 +30,19 @@ class UserRepositoryIntegrationTest {
             createdAt = 1L
         )
 
+        // When
         repository.create(user)
         val found = repository.findByEmail("user1@test.com")
 
+        // Then
         assertNotNull(found)
         assertEquals("user-1", found.id)
         assertEquals("User One", found.displayName)
     }
 
     @Test
-    fun `findPartnerByUserId returns partner when partnerId exists`() {
+    fun `given user with partner when findPartnerByUserId then returns partner`() {
+        // Given
         val partner = User(
             id = "partner-1",
             email = "partner@test.com",
@@ -55,18 +59,21 @@ class UserRepositoryIntegrationTest {
             createdAt = 1L
         )
 
+        // When
         repository.create(partner)
         repository.create(user)
 
         val found = repository.findPartnerByUserId("user-1")
 
+        // Then
         assertNotNull(found)
         assertEquals("partner-1", found.id)
         assertEquals("partner@test.com", found.email)
     }
 
     @Test
-    fun `findPartnerByUserId returns null when partnerId is not set`() {
+    fun `given user without partner when findPartnerByUserId then returns null`() {
+        // Given
         val user = User(
             id = "user-1",
             email = "user@test.com",
@@ -75,9 +82,11 @@ class UserRepositoryIntegrationTest {
             createdAt = 1L
         )
 
+        // When
         repository.create(user)
         val found = repository.findPartnerByUserId("user-1")
 
+        // Then
         assertNull(found)
     }
 }

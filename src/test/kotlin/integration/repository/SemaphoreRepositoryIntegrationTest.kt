@@ -34,9 +34,13 @@ class SemaphoreRepositoryIntegrationTest {
     }
 
     @Test
-    fun `updateUserStatus inserts new semaphore when user has none`() {
+    fun `given user without semaphore when updateUserStatus then inserts semaphore`() {
+        // Given
+
+        // When
         val result = semaphoreRepository.updateUserStatus("user-1", SemaphoreStatus.BUSY)
 
+        // Then
         assertEquals(SemaphoreStatus.BUSY, result.status)
         assertEquals("user-1", result.userId)
 
@@ -51,10 +55,14 @@ class SemaphoreRepositoryIntegrationTest {
     }
 
     @Test
-    fun `updateUserStatus updates existing semaphore without duplicating rows`() {
+    fun `given existing semaphore when updateUserStatus then updates without duplicating rows`() {
+        // Given
         semaphoreRepository.updateUserStatus("user-1", SemaphoreStatus.BUSY)
+
+        // When
         val result = semaphoreRepository.updateUserStatus("user-1", SemaphoreStatus.AVAILABLE)
 
+        // Then
         assertEquals(SemaphoreStatus.AVAILABLE, result.status)
 
         val rows = transaction {

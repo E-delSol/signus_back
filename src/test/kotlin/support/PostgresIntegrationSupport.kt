@@ -8,6 +8,7 @@ import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.PostgreSQLContainer
 
 object PostgresIntegrationSupport {
+    // Requires Docker. Testcontainers needs a Docker API client >= 1.44.
     private val container: PostgreSQLContainer<*> by lazy {
         PostgreSQLContainer("postgres:16-alpine").apply {
             withDatabaseName("signus_test")
@@ -21,7 +22,11 @@ object PostgresIntegrationSupport {
     private var initialized = false
 
     fun ensureDockerAndDatabase() {
-        assumeTrue("Docker is required for repository integration tests", DockerClientFactory.instance().isDockerAvailable)
+        assumeTrue(
+            "Docker is required for repository integration tests. " +
+                "Ensure Docker is running and the API client is >= 1.44 (Testcontainers requirement).",
+            DockerClientFactory.instance().isDockerAvailable
+        )
         if (!initialized) {
             synchronized(this) {
                 if (!initialized) {

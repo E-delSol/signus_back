@@ -144,4 +144,44 @@ class StatusRoutesIntegrationTest {
         // Then
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
+
+    @Test
+    fun `given malformed json when patch status then returns bad request`() = testApplication {
+        // Given
+        val appConfig = testAppConfig()
+        application {
+            configureApp(appConfig = appConfig, startDatabase = false)
+        }
+
+        // When
+        val token = createJwtToken("user-1", appConfig.jwt)
+        val response = client.patch("/status") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody("""{""")
+        }
+
+        // Then
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+    }
+
+    @Test
+    fun `given invalid enum when patch status then returns bad request`() = testApplication {
+        // Given
+        val appConfig = testAppConfig()
+        application {
+            configureApp(appConfig = appConfig, startDatabase = false)
+        }
+
+        // When
+        val token = createJwtToken("user-1", appConfig.jwt)
+        val response = client.patch("/status") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            contentType(ContentType.Application.Json)
+            setBody("""{"status":"INVALID"}""")
+        }
+
+        // Then
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+    }
 }

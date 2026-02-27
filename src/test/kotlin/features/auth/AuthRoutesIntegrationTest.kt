@@ -230,4 +230,76 @@ class AuthRoutesIntegrationTest {
         val body = decodeJson<Map<String, String>>(response.bodyAsText())
         assertTrue(body["error"].orEmpty().isNotBlank())
     }
+
+    @Test
+    fun `given malformed json when register then returns bad request`() = testApplication {
+        // Given
+        val appConfig = testAppConfig()
+        application {
+            configureApp(appConfig = appConfig, startDatabase = false)
+        }
+
+        // When
+        val response = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody("""{""")
+        }
+
+        // Then
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+    }
+
+    @Test
+    fun `given missing required fields when register then returns bad request`() = testApplication {
+        // Given
+        val appConfig = testAppConfig()
+        application {
+            configureApp(appConfig = appConfig, startDatabase = false)
+        }
+
+        // When
+        val response = client.post("/auth/register") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"email":"user@test.com"}""")
+        }
+
+        // Then
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+    }
+
+    @Test
+    fun `given malformed json when login then returns bad request`() = testApplication {
+        // Given
+        val appConfig = testAppConfig()
+        application {
+            configureApp(appConfig = appConfig, startDatabase = false)
+        }
+
+        // When
+        val response = client.post("/auth/login") {
+            contentType(ContentType.Application.Json)
+            setBody("""{""")
+        }
+
+        // Then
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+    }
+
+    @Test
+    fun `given missing required fields when login then returns bad request`() = testApplication {
+        // Given
+        val appConfig = testAppConfig()
+        application {
+            configureApp(appConfig = appConfig, startDatabase = false)
+        }
+
+        // When
+        val response = client.post("/auth/login") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"email":"user@test.com"}""")
+        }
+
+        // Then
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+    }
 }
