@@ -1,25 +1,15 @@
 package com.pecadoartesano.core.plugins
 
-import io.ktor.server.application.*
+import io.ktor.server.application.Application
+import io.ktor.server.application.install
+import io.ktor.server.websocket.WebSockets
+import java.util.concurrent.TimeUnit
 
 fun Application.configureSockets() {
-//    install(WebSockets) {
-//        pingPeriod = 15.seconds
-//        timeout = 15.seconds
-//        maxFrameSize = Long.MAX_VALUE
-//        masking = false
-//    }
-//    routing {
-//        webSocket("/ws") { // websocketSession
-//            for (frame in incoming) {
-//                if (frame is Frame.Text) {
-//                    val text = frame.readText()
-//                    outgoing.send(Frame.Text("YOU SAID: $text"))
-//                    if (text.equals("bye", ignoreCase = true)) {
-//                        close(CloseReason(CloseReason.Codes.NORMAL, "Client said BYE"))
-//                    }
-//                }
-//            }
-//        }
-//    }
+    install(WebSockets) {
+        pingPeriodMillis = TimeUnit.SECONDS.toMillis(15)
+        timeoutMillis = TimeUnit.SECONDS.toMillis(15)
+        maxFrameSize = Long.MAX_VALUE
+        masking = false
+    }
 }

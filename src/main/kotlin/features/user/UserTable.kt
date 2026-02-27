@@ -7,6 +7,8 @@ object UserTable : Table("users") {
     val email = varchar("email", 255).uniqueIndex()
     val passwordHash = varchar("password_hash", 255)
     val displayName = varchar("display_name", 255).nullable()
+    val partnerId = varchar("partner_id", 36).nullable()
+    val fcmToken = varchar("fcm_token", 512).nullable()
     val createdAt = long("created_at")
 
     override val primaryKey = PrimaryKey(id)

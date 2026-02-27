@@ -1,10 +1,13 @@
 package com.pecadoartesano.core.config
 
-
-
 data class AppConfig(
     val jwt: JwtConfig,
-    val database: DatabaseConfig
+    val database: DatabaseConfig,
+    val fcm: FcmConfig
+)
+
+data class FcmConfig(
+    val serverKey: String
 )
 
 fun loadConfig(): AppConfig {
@@ -13,7 +16,8 @@ fun loadConfig(): AppConfig {
         issuer = System.getenv("JWT_ISSUER") ?: error("issuer property not set"),
         audience = System.getenv("JWT_AUDIENCE") ?: error("audience property not set"),
         realm = System.getenv("JWT_REALM") ?: error("realm property not set"),
-        expiration = System.getenv("JWT_EXPIRATION_TIME")?.toLongOrNull() ?: error("expiration property not set or invalid")
+        expiration = System.getenv("JWT_EXPIRATION_TIME")?.toLongOrNull()
+            ?: error("expiration property not set or invalid")
     )
 
     val databaseConfig = DatabaseConfig(
@@ -24,8 +28,13 @@ fun loadConfig(): AppConfig {
         password = System.getenv("DB_PASSWORD") ?: error("dbPassword property not set")
     )
 
+    val fcmConfig = FcmConfig(
+        serverKey = System.getenv("FCM_SERVER_KEY") ?: error("fcmServerKey property not set")
+    )
+
     return AppConfig(
         jwt = jwtConfig,
-        database = databaseConfig
+        database = databaseConfig,
+        fcm = fcmConfig
     )
 }

@@ -33,12 +33,12 @@ fun Route.authRoutes( authService: AuthService) {
                 print("error 1 -->")
                 e.printStackTrace()
                 call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
-            } catch (e: Exception) {
-                print("error 2 -->")
-                call.respond(HttpStatusCode.Conflict, mapOf("error" to "An unexpected error occurred"))
             } catch (e: EmailAlreadyExistsException) {
                 print("error 3 -->")
                 call.respond(HttpStatusCode.Conflict, mapOf("error" to e.message))
+            } catch (e: Exception) {
+                print("error 2 -->")
+                call.respond(HttpStatusCode.Conflict, mapOf("error" to "An unexpected error occurred"))
             }
 
         }
