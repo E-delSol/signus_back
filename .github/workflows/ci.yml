@@ -37,7 +37,7 @@ jobs:
       run: docker version && docker info
 
     - name: Run tests
-      run: ./gradlew clean test --no-daemon
+      run: ./gradlew clean test --no-daemon --info --stacktrace
 
   dependency-submission:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
