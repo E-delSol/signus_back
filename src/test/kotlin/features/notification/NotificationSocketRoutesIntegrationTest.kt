@@ -189,5 +189,10 @@ class NotificationSocketRoutesIntegrationTest {
             targetUserId: String,
             event: com.pecadoartesano.features.notification.dto.PartnerStatusChangedEvent
         ): Boolean = true
+
+        override suspend fun notifySemaphoreStatusChanged(
+            targetUserId: String,
+            event: com.pecadoartesano.features.semaphore.dto.SemaphoreStatusChangedEvent
+        ): Boolean = true
     }
 }
