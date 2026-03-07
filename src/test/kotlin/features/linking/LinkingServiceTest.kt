@@ -7,6 +7,7 @@ import com.pecadoartesano.features.linking.LinkSessionNotFoundException
 import com.pecadoartesano.features.linking.LinkSessionStatus
 import com.pecadoartesano.features.linking.LinkingServiceImpl
 import com.pecadoartesano.features.linking.ports.LinkSessionRepositoryPort
+import com.pecadoartesano.features.linking.ports.LinkingUserRepositoryPort
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -22,9 +23,10 @@ import kotlin.test.assertTrue
 class LinkingServiceTest {
 
     private val repository = mockk<LinkSessionRepositoryPort>()
+    private val linkingUserRepository = mockk<LinkingUserRepositoryPort>()
     private val fixedNow = Instant.parse("2026-03-06T12:00:00Z")
     private val clock: Clock = Clock.fixed(fixedNow, ZoneOffset.UTC)
-    private val service = LinkingServiceImpl(repository, clock)
+    private val service = LinkingServiceImpl(repository, linkingUserRepository, clock)
 
     @Test
     fun `given owner user when createSession then returns pending session with linkCode and 5 minute expiration`() {
@@ -66,6 +68,7 @@ class LinkingServiceTest {
         )
 
         every { repository.findByLinkCode(linkCode) } returns pending
+        every { linkingUserRepository.linkUsers(ownerUserId, confirmerUserId) } returns true
         every { repository.markConfirmed(sessionId, confirmerUserId, fixedNow) } returns confirmed
 
         // When
@@ -75,6 +78,7 @@ class LinkingServiceTest {
         assertEquals(LinkSessionStatus.CONFIRMED, result.status)
         assertEquals(confirmerUserId, result.confirmedByUserId)
         assertEquals(fixedNow, result.confirmedAt)
+        verify(exactly = 1) { linkingUserRepository.linkUsers(ownerUserId, confirmerUserId) }
     }
 
     @Test
@@ -86,6 +90,7 @@ class LinkingServiceTest {
         assertFailsWith<LinkSessionNotFoundException> {
             service.confirmSessionByLinkCode("MISSING1234", UUID.randomUUID())
         }
+        verify(exactly = 0) { linkingUserRepository.linkUsers(any(), any()) }
     }
 
     @Test
@@ -110,6 +115,7 @@ class LinkingServiceTest {
         }
 
         verify(exactly = 1) { repository.updateStatus(sessionId, LinkSessionStatus.EXPIRED) }
+        verify(exactly = 0) { linkingUserRepository.linkUsers(any(), any()) }
     }
 
     @Test
@@ -132,5 +138,6 @@ class LinkingServiceTest {
         assertFailsWith<LinkSessionAlreadyConfirmedException> {
             service.confirmSessionByLinkCode("A7K9P3XQ2M", UUID.randomUUID())
         }
+        verify(exactly = 0) { linkingUserRepository.linkUsers(any(), any()) }
     }
 }

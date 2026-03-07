@@ -9,6 +9,8 @@ import com.pecadoartesano.features.notification.ports.RealtimeNotificationServic
 import com.pecadoartesano.features.notification.notificationSocketRoutes
 import com.pecadoartesano.features.semaphore.ports.StatusService
 import com.pecadoartesano.features.semaphore.statusRoutes
+import com.pecadoartesano.features.user.ports.UserService
+import com.pecadoartesano.features.user.userRoutes
 import io.ktor.server.application.Application
 import io.ktor.server.routing.routing
 
@@ -17,12 +19,14 @@ fun Application.configureRouting(
     statusService: StatusService,
     jwtConfig: JwtConfig,
     realtimeNotificationService: RealtimeNotificationService,
-    linkingService: LinkingService
+    linkingService: LinkingService,
+    userService: UserService
 ) {
     routing {
         authRoutes(authService)
         statusRoutes(statusService)
         linkingRoutes(linkingService)
+        userRoutes(userService)
         notificationSocketRoutes(jwtConfig, realtimeNotificationService)
     }
 }

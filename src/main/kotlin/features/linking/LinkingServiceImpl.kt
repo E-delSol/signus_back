@@ -2,6 +2,7 @@ package com.pecadoartesano.features.linking
 
 import com.pecadoartesano.features.linking.ports.LinkingService
 import com.pecadoartesano.features.linking.ports.LinkSessionRepositoryPort
+import com.pecadoartesano.features.linking.ports.LinkingUserRepositoryPort
 import java.security.SecureRandom
 import java.time.Clock
 import java.time.Instant
@@ -9,6 +10,7 @@ import java.util.UUID
 
 class LinkingServiceImpl(
     private val linkSessionRepository: LinkSessionRepositoryPort,
+    private val linkingUserRepository: LinkingUserRepositoryPort,
     private val clock: Clock = Clock.systemUTC(),
     private val secureRandom: SecureRandom = SecureRandom()
 ) : LinkingService {
@@ -56,6 +58,8 @@ class LinkingServiceImpl(
             }
             throw LinkSessionExpiredException(session.id)
         }
+
+        linkingUserRepository.linkUsers(session.ownerUserId, confirmedByUserId)
 
         return linkSessionRepository.markConfirmed(session.id, confirmedByUserId, Instant.now(clock))
             ?: throw LinkSessionNotFoundException.bySessionId(session.id)

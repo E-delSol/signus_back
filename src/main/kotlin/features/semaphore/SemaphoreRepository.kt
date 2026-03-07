@@ -40,4 +40,19 @@ class SemaphoreRepository : SemaphoreRepositoryPort {
             duration = null
         )
     }
+
+    override fun findByUserId(userId: String): Semaphore? = transaction {
+        SemaphoreTable
+            .selectAll()
+            .where { SemaphoreTable.userId eq userId }
+            .map {
+                Semaphore(
+                    status = SemaphoreStatus.valueOf(it[SemaphoreTable.status]),
+                    userId = it[SemaphoreTable.userId],
+                    expiration = it[SemaphoreTable.expiration],
+                    duration = it[SemaphoreTable.duration]
+                )
+            }
+            .singleOrNull()
+    }
 }
