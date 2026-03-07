@@ -1,7 +1,7 @@
 package features.notification
 
 import com.pecadoartesano.configureApp
-import com.pecadoartesano.features.notification.dto.RealtimeNotificationService
+import com.pecadoartesano.features.notification.ports.RealtimeNotificationService
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.webSocketSession
 import io.ktor.http.takeFrom

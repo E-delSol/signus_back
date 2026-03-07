@@ -1,10 +1,10 @@
 package com.pecadoartesano.features.auth
 
 import com.pecadoartesano.core.exceptions.EmailAlreadyExistsException
-import com.pecadoartesano.features.auth.dto.AuthService
 import com.pecadoartesano.features.auth.dto.LoginRequest
 import com.pecadoartesano.features.auth.dto.RegisterRequest
 import com.pecadoartesano.features.auth.dto.TokenResponse
+import com.pecadoartesano.features.auth.ports.AuthService
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*

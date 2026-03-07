@@ -9,9 +9,10 @@ import com.pecadoartesano.core.plugins.configureSecurity
 import com.pecadoartesano.core.plugins.configureSerialization
 import com.pecadoartesano.core.plugins.configureSockets
 import com.pecadoartesano.core.config.AppConfig
-import com.pecadoartesano.features.auth.dto.AuthService
-import com.pecadoartesano.features.notification.dto.RealtimeNotificationService
-import com.pecadoartesano.features.semaphore.StatusService
+import com.pecadoartesano.features.auth.ports.AuthService
+import com.pecadoartesano.features.linking.ports.LinkingService
+import com.pecadoartesano.features.notification.ports.RealtimeNotificationService
+import com.pecadoartesano.features.semaphore.ports.StatusService
 import io.ktor.server.application.Application
 import org.koin.core.module.Module
 import org.koin.ktor.ext.get
@@ -40,8 +41,9 @@ internal fun Application.configureApp(
     val authService: AuthService = get()
     val statusService: StatusService = get()
     val realtimeNotificationService: RealtimeNotificationService = get()
+    val linkingService: LinkingService = get()
 
     configureSecurity(appConfig.jwt)
     configureSockets()
-    configureRouting(authService, statusService, appConfig.jwt, realtimeNotificationService)
+    configureRouting(authService, statusService, appConfig.jwt, realtimeNotificationService, linkingService)
 }

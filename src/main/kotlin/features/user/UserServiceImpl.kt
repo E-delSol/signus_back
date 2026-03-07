@@ -1,16 +1,17 @@
 package com.pecadoartesano.features.user
 
 import at.favre.lib.crypto.bcrypt.BCrypt
+import com.pecadoartesano.features.user.ports.UserService
 import java.util.UUID
 
-class UserService(
+class UserServiceImpl(
     private val userRepository: UserRepository
-) {
+) : UserService {
 
-    fun register(
+    override fun register(
         email: String,
         rawPassword: String,
-        displayName: String? = null
+        displayName: String?
     ): User {
 
         userRepository.findByEmail(email)?.let {

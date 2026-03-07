@@ -15,7 +15,7 @@ class StatusServiceTest {
 
     private val semaphoreRepository = mockk<SemaphoreRepositoryPort>()
     private val notificationOrchestrator = mockk<NotificationOrchestrator>()
-    private val statusService = StatusService(semaphoreRepository, notificationOrchestrator)
+    private val statusService = StatusServiceImpl(semaphoreRepository, notificationOrchestrator)
 
     @Test
     fun `given new status when updateStatus then updates repository and notifies partner`() = runTest {

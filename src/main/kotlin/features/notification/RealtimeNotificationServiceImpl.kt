@@ -1,7 +1,7 @@
 package com.pecadoartesano.features.notification
 
 import com.pecadoartesano.features.notification.dto.PartnerStatusChangedEvent
-import com.pecadoartesano.features.notification.dto.RealtimeNotificationService
+import com.pecadoartesano.features.notification.ports.RealtimeNotificationService
 import io.ktor.websocket.Frame
 import io.ktor.websocket.WebSocketSession
 import kotlinx.serialization.json.Json

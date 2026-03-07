@@ -3,7 +3,7 @@ package com.pecadoartesano.features.auth
 import com.pecadoartesano.core.exceptions.EmailAlreadyExistsException
 import com.pecadoartesano.core.security.JwtService
 import com.pecadoartesano.core.security.PasswordService
-import com.pecadoartesano.features.auth.dto.AuthService
+import com.pecadoartesano.features.auth.ports.AuthService
 import com.pecadoartesano.features.auth.ports.AuthUserRepositoryPort
 import com.pecadoartesano.features.user.User
 import java.util.UUID

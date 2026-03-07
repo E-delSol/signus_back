@@ -3,7 +3,7 @@ package features.auth
 import com.pecadoartesano.core.config.AppConfig
 import com.pecadoartesano.configureApp
 import com.pecadoartesano.core.exceptions.EmailAlreadyExistsException
-import com.pecadoartesano.features.auth.dto.AuthService
+import com.pecadoartesano.features.auth.ports.AuthService
 import com.pecadoartesano.features.auth.dto.TokenResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.client.request.post

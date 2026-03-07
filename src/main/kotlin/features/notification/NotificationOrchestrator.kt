@@ -1,8 +1,8 @@
 package com.pecadoartesano.features.notification
 
 import com.pecadoartesano.features.notification.dto.PartnerStatusChangedEvent
-import com.pecadoartesano.features.notification.dto.RealtimeNotificationService
 import com.pecadoartesano.features.notification.ports.PartnerLookupPort
+import com.pecadoartesano.features.notification.ports.RealtimeNotificationService
 import com.pecadoartesano.features.semaphore.SemaphoreStatus
 
 class NotificationOrchestrator(

@@ -1,4 +1,6 @@
-package com.pecadoartesano.features.notification.dto
+package com.pecadoartesano.features.notification.ports
+
+import com.pecadoartesano.features.notification.dto.PartnerStatusChangedEvent
 
 import io.ktor.websocket.WebSocketSession
 

@@ -1,4 +1,4 @@
-package com.pecadoartesano.features.user
+package com.pecadoartesano.features.user.dto
 
 import kotlinx.serialization.Serializable
 

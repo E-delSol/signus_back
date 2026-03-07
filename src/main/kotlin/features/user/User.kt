@@ -8,12 +8,4 @@ data class User(
     val partnerId: String? = null,
     val fcmToken: String? = null,
     val createdAt: Long
-) {
-    fun toResponse() = UserResponse(
-        id = id,
-        email = email,
-        displayName = displayName,
-        partnerId = partnerId,
-        createdAt = createdAt
-    )
-}
+)
