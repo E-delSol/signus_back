@@ -6,7 +6,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class PartnerStatusChangedEvent(
     val type: String = "PARTNER_STATUS_CHANGED",
-    val senderId: String,
     val partnerId: String,
-    val status: SemaphoreStatus
+    val status: SemaphoreStatus,
+    val statusExpiration: Long?,
+    val timestamp: Long
 )

@@ -1,6 +1,8 @@
 package com.pecadoartesano.features.user
 
 import at.favre.lib.crypto.bcrypt.BCrypt
+import com.pecadoartesano.features.notification.dto.PartnerUnlinkedEvent
+import com.pecadoartesano.features.notification.ports.RealtimeNotificationService
 import com.pecadoartesano.features.semaphore.UserState
 import com.pecadoartesano.features.semaphore.ports.SemaphoreRepositoryPort
 import com.pecadoartesano.features.user.ports.UserService
@@ -8,7 +10,8 @@ import java.util.UUID
 
 class UserServiceImpl(
     private val userRepository: UserRepository,
-    private val semaphoreRepository: SemaphoreRepositoryPort
+    private val semaphoreRepository: SemaphoreRepositoryPort,
+    private val realtimeNotificationService: RealtimeNotificationService
 ) : UserService {
 
     override fun register(
@@ -67,6 +70,19 @@ class UserServiceImpl(
             status = partnerSemaphore?.status,
             statusExpiration = partnerSemaphore?.expiration,
             statusDuration = partnerSemaphore?.duration
+        )
+    }
+
+    override suspend fun unlinkCurrentUser(userId: String) {
+        val partnerId = userRepository.unlinkUsers(userId)
+            ?: throw IllegalStateException("User has no linked partner")
+
+        realtimeNotificationService.notifyPartnerUnlinked(
+            targetUserId = partnerId,
+            event = PartnerUnlinkedEvent(
+                partnerId = userId,
+                timestamp = System.currentTimeMillis()
+            )
         )
     }
 

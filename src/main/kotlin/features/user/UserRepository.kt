@@ -76,6 +76,26 @@ class UserRepository : AuthUserRepositoryPort, PartnerLookupPort, LinkingUserRep
         true
     }
 
+    fun unlinkUsers(userId: String): String? = transaction {
+        val userRow = UserTable
+            .selectAll()
+            .where { UserTable.id eq userId }
+            .singleOrNull()
+            ?: throw IllegalArgumentException("User with id $userId was not found")
+
+        val partnerId = userRow[UserTable.partnerId] ?: return@transaction null
+
+        UserTable.update({ UserTable.id eq userId }) {
+            it[UserTable.partnerId] = null
+        }
+
+        UserTable.update({ UserTable.id eq partnerId }) {
+            it[UserTable.partnerId] = null
+        }
+
+        partnerId
+    }
+
     private fun toUser(row: ResultRow): User =
         User(
             id = row[UserTable.id],

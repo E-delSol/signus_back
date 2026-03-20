@@ -1,15 +1,17 @@
 package com.pecadoartesano.features.notification
 
 import com.pecadoartesano.features.notification.dto.PartnerStatusChangedEvent
+import com.pecadoartesano.features.notification.dto.PartnerUnlinkedEvent
 import com.pecadoartesano.features.notification.ports.RealtimeNotificationService
-import com.pecadoartesano.features.semaphore.dto.SemaphoreStatusChangedEvent
 import io.ktor.websocket.Frame
 import io.ktor.websocket.WebSocketSession
 import kotlinx.serialization.json.Json
 import java.util.concurrent.ConcurrentHashMap
 
 class RealtimeNotificationServiceImpl(
-    private val json: Json = Json
+    private val json: Json = Json {
+        encodeDefaults = true
+    }
 ) : RealtimeNotificationService {
     private val sessions = ConcurrentHashMap<String, WebSocketSession>()
 
@@ -26,8 +28,8 @@ class RealtimeNotificationServiceImpl(
         return sendToUser(targetUserId, payload)
     }
 
-    override suspend fun notifySemaphoreStatusChanged(targetUserId: String, event: SemaphoreStatusChangedEvent): Boolean {
-        val payload = json.encodeToString(SemaphoreStatusChangedEvent.serializer(), event)
+    override suspend fun notifyPartnerUnlinked(targetUserId: String, event: PartnerUnlinkedEvent): Boolean {
+        val payload = json.encodeToString(PartnerUnlinkedEvent.serializer(), event)
         return sendToUser(targetUserId, payload)
     }
 

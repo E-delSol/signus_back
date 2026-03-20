@@ -190,9 +190,9 @@ class NotificationSocketRoutesIntegrationTest {
             event: com.pecadoartesano.features.notification.dto.PartnerStatusChangedEvent
         ): Boolean = true
 
-        override suspend fun notifySemaphoreStatusChanged(
+        override suspend fun notifyPartnerUnlinked(
             targetUserId: String,
-            event: com.pecadoartesano.features.semaphore.dto.SemaphoreStatusChangedEvent
+            event: com.pecadoartesano.features.notification.dto.PartnerUnlinkedEvent
         ): Boolean = true
     }
 }

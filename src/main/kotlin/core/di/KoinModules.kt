@@ -18,8 +18,10 @@ import com.pecadoartesano.features.linking.ports.LinkSessionRepositoryPort
 import com.pecadoartesano.features.linking.ports.LinkingService
 import com.pecadoartesano.features.linking.ports.LinkingUserRepositoryPort
 import com.pecadoartesano.features.notification.NotificationOrchestrator
+import com.pecadoartesano.features.notification.PartnerPushNotificationService
 import com.pecadoartesano.features.notification.PushProvider
 import com.pecadoartesano.features.notification.RealtimeNotificationServiceImpl
+import com.pecadoartesano.features.notification.ports.DeviceTokenLookupPort
 import com.pecadoartesano.features.notification.ports.PartnerLookupPort
 import com.pecadoartesano.features.notification.ports.RealtimeNotificationService
 import com.pecadoartesano.features.notification.providers.FcmPushProvider
@@ -49,17 +51,19 @@ fun appModules(appConfig: AppConfig): List<Module> = listOf(
         single<LinkingUserRepositoryPort> { get<UserRepository>() }
         single { DeviceTokenRepository() }
         single<DeviceTokenRepositoryPort> { get<DeviceTokenRepository>() }
+        single<DeviceTokenLookupPort> { get<DeviceTokenRepository>() }
 
         single { PasswordService() }
         single { JwtService(get()) }
         single<AuthService> { AuthServiceImpl(get(), get(), get()) }
         single<LinkingService> { LinkingServiceImpl(get(), get()) }
-        single<UserService> { UserServiceImpl(get(), get()) }
+        single<UserService> { UserServiceImpl(get(), get(), get()) }
         single<DeviceTokenService> { DeviceTokenServiceImpl(get()) }
 
         single<RealtimeNotificationService> { RealtimeNotificationServiceImpl() }
         single<PushProvider> { FcmPushProvider(serverKey = get<FcmConfig>().serverKey) }
+        single { PartnerPushNotificationService(get(), get()) }
         single { NotificationOrchestrator(get(), get(), get()) }
-        single<StatusService> { StatusServiceImpl(get(), get(), get()) }
+        single<StatusService> { StatusServiceImpl(get(), get()) }
     }
 )

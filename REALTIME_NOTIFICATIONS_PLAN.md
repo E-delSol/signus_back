@@ -1,241 +1,392 @@
-# Signus – Realtime & Push Notification Architecture
+# Signus - Current Realtime and Push Status
 
-Este documento describe la arquitectura final de sincronización de estado entre dispositivos
-y las tareas necesarias para completar la migración desde Firebase hacia un backend propio.
+This document reflects the current state of the migration from Firebase to a custom backend for synchronization between users.
 
-El objetivo es conseguir:
+The architecture principle remains the same:
 
-- Sincronización instantánea cuando la app está abierta
-- Notificaciones cuando la app está cerrada o en background
-- Backend Ktor como fuente de verdad
-- Firebase reducido únicamente a transporte de push notifications
+- the Ktor backend is the source of truth
+- WebSocket and FCM are delivery channels
+- the persisted state has priority over any client cache
 
----
+## Executive summary
 
-# Arquitectura final
+Current status:
 
-La comunicación entre dispositivos se realiza mediante dos canales.
+- phase 1 completed in backend
+- phase 2 completed in backend
+- phase 3 completed in backend
+- phase 4 pending in Android
 
-## 1. WebSocket (app abierta)
+Current result:
 
-Se utiliza cuando la app está en ejecución.
+- if the partner app has an active websocket, it receives realtime events
+- if it does not have an active websocket, the backend falls back to FCM push for status changes
+- unlinking still notifies only through realtime
 
-Flujo:
+## Currently implemented architecture
 
-1. Usuario A cambia su estado.
-2. La app envía `PATCH /status` al backend.
-3. El backend actualiza el estado en base de datos.
-4. El backend envía un evento WebSocket al partner.
-5. La app del partner actualiza el disco del semáforo inmediatamente.
+### Channel 1 - WebSocket
 
-Ventajas:
+Current usage:
 
-- Latencia mínima
-- Sin polling
-- Actualización instantánea
+- client connection to `WS /ws?token=<jwt>`
+- backend registers the session by `userId`
+- backend sends server-push events to the partner when appropriate
 
----
+Real events:
 
-## 2. FCM Push Notification (app cerrada o en background)
+- `PARTNER_STATUS_CHANGED`
+- `PARTNER_UNLINKED`
 
-Se utiliza cuando la app del partner no tiene conexión WebSocket activa.
+### Channel 2 - FCM Push
 
-Flujo:
+Current usage:
 
-1. Usuario A cambia su estado.
-2. Backend guarda el estado.
-3. Backend detecta que el partner no tiene sesión WebSocket.
-4. Backend envía notificación push mediante FCM.
-5. Android muestra la notificación aunque la app esté cerrada.
+- backend keeps tokens per device in `user_device_tokens`
+- backend looks up the partner's active tokens
+- backend sends push through `FcmPushProvider` when realtime does not deliver a status change
 
-Ventajas:
+Current role of Firebase:
 
-- Funciona con la app cerrada
-- Entrega fiable del sistema
-- Bajo consumo de batería
+- only FCM transport
 
----
+Firebase no longer participates in:
 
-# Responsabilidades del sistema
+- auth
+- user persistence
+- state persistence
+- realtime synchronization between clients
 
-## Backend (Ktor)
-
-Responsable de:
-
-- Auth
-- Linking de dispositivos
-- Estado del semáforo
-- Persistencia de usuarios
-- Gestión de WebSocket
-- Envío de notificaciones push
-- Sincronización de estados
-
-El backend es la **fuente de verdad del estado**.
-
----
-
-## App Android
-
-Responsable de:
-
-- UI
-- conexión WebSocket
-- actualización del estado local
-- recepción de notificaciones push
-- sincronización del token FCM con backend
-
----
-
-## Firebase
-
-Firebase queda reducido únicamente a:
-
-- Firebase Cloud Messaging (FCM)
-
-NO se utiliza:
-
-- Firebase Auth
-- Firestore
-- Realtime Database
-
----
-
-# Estado actual del proyecto
-
-## Backend
-
-Completado:
-
-- Auth backend
-- Linking entre dispositivos
-- Endpoint `PATCH /status`
-- WebSocket realtime
-- Eventos `SemaphoreStatusChangedEvent`
-- Notificación al partner
-
-Pendiente:
-
-- Integración de FCM en backend
-- Envío de push si el partner no está conectado por WebSocket
-
----
-
-## App
-
-Completado:
-
-- Eliminación de polling
-- WebSocket realtime
-- sincronización del semáforo
-- actualización de estado tras `PATCH /status`
-
-Pendiente:
-
-- Registrar token FCM en backend
-- recibir notificaciones push
-- mostrar notificación del sistema
-
----
-
-# Tareas pendientes
-
-## Fase 1 — Sincronizar token FCM
-
-### App
-
-- obtener token con `FirebaseMessaging`
-- enviar token al backend
-- refrescar token cuando cambie
+## Real status by component
 
 ### Backend
 
-Crear endpoint:
+Completed:
 
-POST /users/fcm-token
+- auth with JWT
+- linking through sessions
+- current user and partner retrieval
+- `PATCH /status`
+- WebSocket `/ws`
+- unified realtime contract
+- FCM token registration per device
+- backend FCM provider
+- `realtime -> fallback push` orchestration for status changes
 
-Guardar en base de datos:
+Pending in backend:
 
-- userId
-- fcmToken
-- deviceId (opcional)
-- updatedAt
+- push fallback for unlinking
+- richer or typed push payload if needed in Android
+- delivery metrics or traceability
 
----
+### Android app
 
-## Fase 2 — Servicio de push en backend
+Confirmed by backend contract:
 
-Crear servicio:
+- it can authenticate through JWT
+- it can open websocket with `token`
+- it can update state through HTTP
+- it can register and deactivate FCM token per device
 
-PushNotificationService
+Pending to complete the end-to-end migration:
 
-Responsabilidades:
+- actual push reception in background
+- showing system notification
+- deciding how to refresh local state after tapping a push
 
-- enviar notificación FCM
-- construir payload
-- gestionar errores
-- registrar logs de entrega
+## Migration phases
 
----
+### Phase 1 - Synchronize FCM token
 
-## Fase 3 — Integración con Semaphore
+Status: completed in backend.
 
-Modificar flujo de cambio de estado:
+Implemented:
 
-StatusService.updateStatus()
+- `PUT /devices/fcm-token`
+- `DELETE /devices/fcm-token/{deviceId}`
+- `GET /devices/fcm-token`
+- persistence in `user_device_tokens` table
+- active token lookup through `DeviceTokenLookupPort`
 
-Nuevo flujo:
+Corrections compared to previous versions of this document:
 
-updateStatus  
-→ guardar estado  
-→ notificar partner por websocket  
-→ si no hay websocket activo  
-→ enviar push FCM
+- `POST /users/fcm-token` does not exist
+- the real contract is per device, not flat per user
 
----
+### Phase 2 - Push service in backend
 
-## Fase 4 — Recepción de notificaciones en Android
+Status: completed in backend.
 
-Crear:
+Implemented:
 
-FirebaseMessagingService
+- `PartnerPushNotificationService`
+- `FcmPushProvider`
+- sending to multiple active tokens
+- tolerance to failure per individual token
 
-Responsabilidades:
+Real behavior:
 
-- recibir push
-- mostrar notificación
-- reproducir sonido
-- abrir app si el usuario toca la notificación
+- if there are no active tokens, the flow returns without breaking the use case
+- if a specific token fails, it continues with the rest
 
----
+### Phase 3 - Integration with state change
 
-# Mejoras futuras
+Status: completed in backend.
 
-Opcionales:
+Current real flow:
 
-- reconexión automática de WebSocket
-- cola de eventos
-- múltiples dispositivos por usuario
-- preferencias de notificación
-- métricas de entrega
-- deduplicación de eventos
+1. `PATCH /status`
+2. persistence in DB
+3. `StatusServiceImpl` delegates to `NotificationOrchestrator`
+4. the orchestrator looks up the partner
+5. it tries to send `PARTNER_STATUS_CHANGED` over websocket
+6. if realtime does not deliver, it uses push fallback
 
----
+Real pieces involved:
 
-# Principio clave de arquitectura
+- `StatusServiceImpl`
+- `NotificationOrchestrator`
+- `RealtimeNotificationService`
+- `PartnerPushNotificationService`
+- `PartnerLookupPort`
 
-El backend es siempre la fuente de verdad.
+Corrections compared to previous versions:
 
-WebSocket y FCM son únicamente **canales de entrega de eventos**.
+- `SemaphoreStatusChangedEvent` no longer exists as the current contract
+- the current realtime contract is `PARTNER_STATUS_CHANGED`
+- FCM integration in backend is no longer pending
 
-Backend  
-↓  
-Evento  
-↓  
-WebSocket (foreground)  
-FCM (background)
+### Phase 4 - Receiving notifications in Android
 
-Esto garantiza:
+Status: pending outside this repository.
 
-- consistencia
-- escalabilidad
-- control completo del sistema
+Pending:
+
+- `FirebaseMessagingService` or equivalent in the app
+- system notification
+- deep link or app open strategy
+- local state re-sync if applicable
+
+## Real contracts
+
+### Auth
+
+#### `POST /auth/register`
+
+Request:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "secret123",
+  "displayName": "User"
+}
+```
+
+Response:
+
+```json
+{
+  "accessToken": "<jwt>"
+}
+```
+
+#### `POST /auth/login`
+
+Request:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "secret123"
+}
+```
+
+Response:
+
+```json
+{
+  "accessToken": "<jwt>"
+}
+```
+
+### Linking sessions
+
+#### `POST /linking/sessions`
+
+Response:
+
+```json
+{
+  "sessionId": "a6a21519-5d42-43d4-b6ea-e7f0c8187f32",
+  "linkCode": "ABC123",
+  "expiresAt": "2026-03-20T12:34:56Z"
+}
+```
+
+#### `POST /linking/sessions/confirm`
+
+Request:
+
+```json
+{
+  "linkCode": "ABC123"
+}
+```
+
+Response:
+
+```json
+{
+  "sessionId": "a6a21519-5d42-43d4-b6ea-e7f0c8187f32",
+  "status": "CONFIRMED"
+}
+```
+
+#### `GET /linking/sessions/{id}`
+
+Response:
+
+```json
+{
+  "sessionId": "a6a21519-5d42-43d4-b6ea-e7f0c8187f32",
+  "status": "PENDING"
+}
+```
+
+### `/partner`
+
+#### `GET /partner`
+
+Response:
+
+```json
+{
+  "id": "user-2",
+  "status": "AVAILABLE",
+  "statusExpiration": null,
+  "statusDuration": null,
+  "partnerId": "user-1"
+}
+```
+
+#### `DELETE /partner`
+
+Response: `204 No Content`
+
+Current realtime effect:
+
+- if the partner has an active websocket, it receives `PARTNER_UNLINKED`
+
+### `PATCH /status`
+
+Request:
+
+```json
+{
+  "status": "BUSY"
+}
+```
+
+Response:
+
+```json
+{
+  "status": "BUSY",
+  "userId": "user-1",
+  "expiration": null,
+  "duration": null
+}
+```
+
+Supported states:
+
+- `AVAILABLE`
+- `BUSY`
+- `OFFLINE`
+
+### WebSocket events
+
+#### `PARTNER_STATUS_CHANGED`
+
+```json
+{
+  "type": "PARTNER_STATUS_CHANGED",
+  "partnerId": "user-1",
+  "status": "AVAILABLE",
+  "statusExpiration": null,
+  "timestamp": 1710930000000
+}
+```
+
+#### `PARTNER_UNLINKED`
+
+```json
+{
+  "type": "PARTNER_UNLINKED",
+  "partnerId": "user-1",
+  "timestamp": 1710930000000
+}
+```
+
+### Device FCM tokens
+
+#### `PUT /devices/fcm-token`
+
+Request:
+
+```json
+{
+  "deviceId": "android-device-1",
+  "fcmToken": "fcm-token-value",
+  "platform": "android",
+  "appVersion": "1.0.0"
+}
+```
+
+Response:
+
+```json
+{
+  "created": true,
+  "token": {
+    "id": "token-row-id",
+    "deviceId": "android-device-1",
+    "platform": "android",
+    "appVersion": "1.0.0",
+    "active": true,
+    "createdAt": 1710930000000,
+    "updatedAt": 1710930000000,
+    "lastRegisteredAt": 1710930000000,
+    "deactivatedAt": null
+  }
+}
+```
+
+#### `DELETE /devices/fcm-token/{deviceId}`
+
+Response: `204 No Content`
+
+## Relevant behaviors already implemented
+
+State change:
+
+- if the partner does not exist, the state is persisted and nothing is notified
+- if there is an active websocket, realtime is attempted
+- if realtime does not deliver, push is used
+- if there are no active tokens, the flow does not fail
+- if a specific token fails, it continues with the others
+- if notification fails, the already persisted state change is not reverted
+
+Unlinking:
+
+- if the user has no partner, it returns a domain error
+- if the partner has an active websocket, it receives `PARTNER_UNLINKED`
+- there is no push fallback implemented for unlinking
+
+## Real pending items
+
+- implement push reception in Android
+- define the final UX when opening the app from a push
+- decide whether unlinking will also need push fallback
+- add delivery observability if the project requires it

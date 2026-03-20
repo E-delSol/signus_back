@@ -1,6 +1,7 @@
 package com.pecadoartesano.features.notification
 
 import com.pecadoartesano.features.notification.dto.PartnerStatusChangedEvent
+import com.pecadoartesano.features.notification.dto.PartnerUnlinkedEvent
 import com.pecadoartesano.features.semaphore.SemaphoreStatus
 import io.ktor.websocket.Frame
 import io.ktor.websocket.WebSocketSession
@@ -19,9 +20,10 @@ class RealtimeNotificationServiceImplTest {
         // Given
         val service = RealtimeNotificationServiceImpl()
         val event = PartnerStatusChangedEvent(
-            senderId = "sender-1",
-            partnerId = "partner-1",
-            status = SemaphoreStatus.BUSY
+            partnerId = "sender-1",
+            status = SemaphoreStatus.BUSY,
+            statusExpiration = null,
+            timestamp = 1_700_000_000_000
         )
 
         // When
@@ -40,9 +42,10 @@ class RealtimeNotificationServiceImplTest {
         coEvery { session.send(capture(frameSlot)) } returns Unit
         service.registerSession("partner-1", session)
         val event = PartnerStatusChangedEvent(
-            senderId = "sender-1",
-            partnerId = "partner-1",
-            status = SemaphoreStatus.AVAILABLE
+            partnerId = "sender-1",
+            status = SemaphoreStatus.AVAILABLE,
+            statusExpiration = null,
+            timestamp = 1_700_000_000_000
         )
 
         // When
@@ -53,7 +56,33 @@ class RealtimeNotificationServiceImplTest {
         coVerify(exactly = 1) { session.send(any()) }
         val sent = frameSlot.captured as Frame.Text
         val text = sent.data.decodeToString()
-        assertTrue(text.contains("\"partnerId\":\"partner-1\""))
+        assertTrue(text.contains("\"partnerId\":\"sender-1\""))
         assertTrue(text.contains("\"status\":\"AVAILABLE\""))
+        assertTrue(text.contains("\"statusExpiration\":null"))
+    }
+
+    @Test
+    fun `given registered session when notify partner unlinked then sends event and returns true`() = runTest {
+        // Given
+        val service = RealtimeNotificationServiceImpl()
+        val session = mockk<WebSocketSession>()
+        val frameSlot = io.mockk.slot<Frame>()
+        coEvery { session.send(capture(frameSlot)) } returns Unit
+        service.registerSession("partner-1", session)
+        val event = PartnerUnlinkedEvent(
+            partnerId = "sender-1",
+            timestamp = 1_700_000_000_000
+        )
+
+        // When
+        val delivered = service.notifyPartnerUnlinked("partner-1", event)
+
+        // Then
+        assertTrue(delivered)
+        coVerify(exactly = 1) { session.send(any()) }
+        val sent = frameSlot.captured as Frame.Text
+        val text = sent.data.decodeToString()
+        assertTrue(text.contains("\"type\":\"PARTNER_UNLINKED\""))
+        assertTrue(text.contains("\"partnerId\":\"sender-1\""))
     }
 }

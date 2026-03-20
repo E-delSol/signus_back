@@ -4,27 +4,34 @@ import com.pecadoartesano.features.notification.dto.PartnerStatusChangedEvent
 import com.pecadoartesano.features.notification.ports.PartnerLookupPort
 import com.pecadoartesano.features.notification.ports.RealtimeNotificationService
 import com.pecadoartesano.features.semaphore.SemaphoreStatus
+import org.slf4j.LoggerFactory
 
 class NotificationOrchestrator(
     private val partnerLookup: PartnerLookupPort,
     private val realtimeNotificationService: RealtimeNotificationService,
-    private val pushProvider: PushProvider
+    private val partnerPushNotificationService: PartnerPushNotificationService
 ) {
+    private val logger = LoggerFactory.getLogger(NotificationOrchestrator::class.java)
+
     suspend fun notifyPartnerAboutStatusChange(senderId: String, newStatus: SemaphoreStatus) {
         val partner = partnerLookup.findPartnerByUserId(senderId) ?: return
 
         val event = PartnerStatusChangedEvent(
-            senderId = senderId,
-            partnerId = partner.id,
-            status = newStatus
+            partnerId = senderId,
+            status = newStatus,
+            statusExpiration = null,
+            timestamp = System.currentTimeMillis()
         )
 
-        val deliveredRealtime = realtimeNotificationService.notifyPartnerStatusChanged(partner.id, event)
+        val deliveredRealtime = runCatching {
+            realtimeNotificationService.notifyPartnerStatusChanged(partner.id, event)
+        }.onFailure { throwable ->
+            logger.warn("Realtime notification failed for partner {}", partner.id, throwable)
+        }.getOrDefault(false)
 
-        if (!deliveredRealtime && !partner.fcmToken.isNullOrBlank()) {
-            pushProvider.sendPush(
+        if (!deliveredRealtime) {
+            partnerPushNotificationService.notifyUserDevices(
                 targetUserId = partner.id,
-                token = partner.fcmToken,
                 title = "Estado actualizado",
                 body = "Tu pareja ahora está ${newStatus.name}"
             )

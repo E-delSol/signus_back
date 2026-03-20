@@ -2,6 +2,7 @@ package com.pecadoartesano.features.devicetoken
 
 import com.pecadoartesano.features.devicetoken.ports.DeviceTokenRepositoryPort
 import com.pecadoartesano.features.devicetoken.ports.DeviceTokenUpsertResult
+import com.pecadoartesano.features.notification.ports.DeviceTokenLookupPort
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -13,7 +14,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import java.util.UUID
 
-class DeviceTokenRepository : DeviceTokenRepositoryPort {
+class DeviceTokenRepository : DeviceTokenRepositoryPort, DeviceTokenLookupPort {
 
     override fun upsertForUserDevice(
         userId: String,
@@ -126,6 +127,11 @@ class DeviceTokenRepository : DeviceTokenRepositoryPort {
             .map(::toDeviceToken)
             .sortedByDescending { it.lastRegisteredAt }
     }
+
+    override fun findActiveFcmTokensByUserId(userId: String): List<String> =
+        listByUserId(userId, includeInactive = false)
+            .map { it.fcmToken }
+            .distinct()
 
     private fun toDeviceToken(row: ResultRow): DeviceToken =
         DeviceToken(

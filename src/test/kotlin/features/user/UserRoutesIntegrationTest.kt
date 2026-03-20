@@ -7,6 +7,7 @@ import com.pecadoartesano.features.user.dto.MeResponse
 import com.pecadoartesano.features.user.ports.UserService
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.delete
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
@@ -38,6 +39,9 @@ class UserRoutesIntegrationTest {
                 )
 
             override fun getCurrentPartner(userId: String): UserState =
+                throw UnsupportedOperationException("Not used in this test")
+
+            override suspend fun unlinkCurrentUser(userId: String) =
                 throw UnsupportedOperationException("Not used in this test")
         }
 
@@ -103,6 +107,9 @@ class UserRoutesIntegrationTest {
                     statusExpiration = null,
                     statusDuration = null
                 )
+
+            override suspend fun unlinkCurrentUser(userId: String) =
+                throw UnsupportedOperationException("Not used in this test")
         }
 
         application {
@@ -146,6 +153,9 @@ class UserRoutesIntegrationTest {
 
             override fun getCurrentPartner(userId: String): UserState =
                 throw IllegalStateException("User has no linked partner")
+
+            override suspend fun unlinkCurrentUser(userId: String) =
+                throw UnsupportedOperationException("Not used in this test")
         }
 
         application {
@@ -163,6 +173,90 @@ class UserRoutesIntegrationTest {
         // When
         val token = createJwtToken("user-1", appConfig.jwt)
         val response = client.get("/partner") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+        }
+
+        // Then
+        assertEquals(HttpStatusCode.NotFound, response.status)
+    }
+
+    @Test
+    fun `given valid token when delete partner then returns no content`() = testApplication {
+        // Given
+        val appConfig = testAppConfig()
+        var capturedUserId: String? = null
+        val fakeUserService = object : UserService {
+            override fun register(email: String, rawPassword: String, displayName: String?) =
+                throw UnsupportedOperationException("Not used in this test")
+
+            override fun getCurrentUser(userId: String): UserState =
+                throw UnsupportedOperationException("Not used in this test")
+
+            override fun getCurrentPartner(userId: String): UserState =
+                throw UnsupportedOperationException("Not used in this test")
+
+            override suspend fun unlinkCurrentUser(userId: String) {
+                capturedUserId = userId
+            }
+        }
+
+        application {
+            configureApp(
+                appConfig = appConfig,
+                startDatabase = false,
+                overrideModules = listOf(
+                    koinModule {
+                        single<UserService> { fakeUserService }
+                    }
+                )
+            )
+        }
+
+        // When
+        val token = createJwtToken("user-1", appConfig.jwt)
+        val response = client.delete("/partner") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+        }
+
+        // Then
+        assertEquals(HttpStatusCode.NoContent, response.status)
+        assertEquals("user-1", capturedUserId)
+    }
+
+    @Test
+    fun `given user without linked partner when delete partner then returns not found`() = testApplication {
+        // Given
+        val appConfig = testAppConfig()
+        val fakeUserService = object : UserService {
+            override fun register(email: String, rawPassword: String, displayName: String?) =
+                throw UnsupportedOperationException("Not used in this test")
+
+            override fun getCurrentUser(userId: String): UserState =
+                throw UnsupportedOperationException("Not used in this test")
+
+            override fun getCurrentPartner(userId: String): UserState =
+                throw UnsupportedOperationException("Not used in this test")
+
+            override suspend fun unlinkCurrentUser(userId: String) {
+                throw IllegalStateException("User has no linked partner")
+            }
+        }
+
+        application {
+            configureApp(
+                appConfig = appConfig,
+                startDatabase = false,
+                overrideModules = listOf(
+                    koinModule {
+                        single<UserService> { fakeUserService }
+                    }
+                )
+            )
+        }
+
+        // When
+        val token = createJwtToken("user-1", appConfig.jwt)
+        val response = client.delete("/partner") {
             header(HttpHeaders.Authorization, "Bearer $token")
         }
 

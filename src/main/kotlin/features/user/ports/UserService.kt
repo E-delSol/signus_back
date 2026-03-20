@@ -13,4 +13,6 @@ interface UserService {
     fun getCurrentUser(userId: String): UserState
 
     fun getCurrentPartner(userId: String): UserState
+
+    suspend fun unlinkCurrentUser(userId: String)
 }
