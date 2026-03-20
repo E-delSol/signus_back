@@ -8,6 +8,10 @@ import com.pecadoartesano.core.security.PasswordService
 import com.pecadoartesano.features.auth.AuthServiceImpl
 import com.pecadoartesano.features.auth.ports.AuthService
 import com.pecadoartesano.features.auth.ports.AuthUserRepositoryPort
+import com.pecadoartesano.features.devicetoken.DeviceTokenRepository
+import com.pecadoartesano.features.devicetoken.DeviceTokenServiceImpl
+import com.pecadoartesano.features.devicetoken.ports.DeviceTokenRepositoryPort
+import com.pecadoartesano.features.devicetoken.ports.DeviceTokenService
 import com.pecadoartesano.features.linking.LinkSessionRepository
 import com.pecadoartesano.features.linking.LinkingServiceImpl
 import com.pecadoartesano.features.linking.ports.LinkSessionRepositoryPort
@@ -43,12 +47,15 @@ fun appModules(appConfig: AppConfig): List<Module> = listOf(
         single { LinkSessionRepository() }
         single<LinkSessionRepositoryPort> { get<LinkSessionRepository>() }
         single<LinkingUserRepositoryPort> { get<UserRepository>() }
+        single { DeviceTokenRepository() }
+        single<DeviceTokenRepositoryPort> { get<DeviceTokenRepository>() }
 
         single { PasswordService() }
         single { JwtService(get()) }
         single<AuthService> { AuthServiceImpl(get(), get(), get()) }
         single<LinkingService> { LinkingServiceImpl(get(), get()) }
         single<UserService> { UserServiceImpl(get(), get()) }
+        single<DeviceTokenService> { DeviceTokenServiceImpl(get()) }
 
         single<RealtimeNotificationService> { RealtimeNotificationServiceImpl() }
         single<PushProvider> { FcmPushProvider(serverKey = get<FcmConfig>().serverKey) }

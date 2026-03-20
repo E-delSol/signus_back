@@ -3,6 +3,8 @@ package com.pecadoartesano.core.plugins
 import com.pecadoartesano.core.config.JwtConfig
 import com.pecadoartesano.features.auth.authRoutes
 import com.pecadoartesano.features.auth.ports.AuthService
+import com.pecadoartesano.features.devicetoken.deviceTokenRoutes
+import com.pecadoartesano.features.devicetoken.ports.DeviceTokenService
 import com.pecadoartesano.features.linking.linkingRoutes
 import com.pecadoartesano.features.linking.ports.LinkingService
 import com.pecadoartesano.features.notification.ports.RealtimeNotificationService
@@ -20,13 +22,15 @@ fun Application.configureRouting(
     jwtConfig: JwtConfig,
     realtimeNotificationService: RealtimeNotificationService,
     linkingService: LinkingService,
-    userService: UserService
+    userService: UserService,
+    deviceTokenService: DeviceTokenService
 ) {
     routing {
         authRoutes(authService)
         statusRoutes(statusService)
         linkingRoutes(linkingService)
         userRoutes(userService)
+        deviceTokenRoutes(deviceTokenService)
         notificationSocketRoutes(jwtConfig, realtimeNotificationService)
     }
 }
