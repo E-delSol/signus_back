@@ -3,7 +3,7 @@ package com.pecadoartesano.features.notification
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.pecadoartesano.core.config.JwtConfig
-import com.pecadoartesano.features.notification.dto.RealtimeNotificationService
+import com.pecadoartesano.features.notification.ports.RealtimeNotificationService
 import io.ktor.server.routing.Route
 import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.CloseReason

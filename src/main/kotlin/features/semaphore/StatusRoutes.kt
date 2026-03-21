@@ -1,5 +1,7 @@
 package com.pecadoartesano.features.semaphore
 
+import com.pecadoartesano.features.semaphore.dto.StatusPatchRequest
+import com.pecadoartesano.features.semaphore.ports.StatusService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
@@ -8,7 +10,6 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.patch
-import kotlinx.serialization.Serializable
 
 fun Route.statusRoutes(statusService: StatusService) {
     authenticate {
@@ -27,8 +28,3 @@ fun Route.statusRoutes(statusService: StatusService) {
         }
     }
 }
-
-@Serializable
-data class StatusPatchRequest(
-    val status: SemaphoreStatus
-)

@@ -1,7 +1,7 @@
 package integration.di
 
 import com.pecadoartesano.configureApp
-import com.pecadoartesano.features.auth.dto.AuthService
+import com.pecadoartesano.features.auth.ports.AuthService
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText

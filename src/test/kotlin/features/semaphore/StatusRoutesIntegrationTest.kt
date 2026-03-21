@@ -3,7 +3,7 @@ package features.semaphore
 import com.pecadoartesano.configureApp
 import com.pecadoartesano.features.semaphore.Semaphore
 import com.pecadoartesano.features.semaphore.SemaphoreStatus
-import com.pecadoartesano.features.semaphore.StatusService
+import com.pecadoartesano.features.semaphore.ports.StatusService
 import io.ktor.client.request.header
 import io.ktor.client.request.patch
 import io.ktor.client.request.setBody

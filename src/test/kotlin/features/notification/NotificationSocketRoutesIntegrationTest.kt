@@ -1,7 +1,7 @@
 package features.notification
 
 import com.pecadoartesano.configureApp
-import com.pecadoartesano.features.notification.dto.RealtimeNotificationService
+import com.pecadoartesano.features.notification.ports.RealtimeNotificationService
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.plugins.websocket.webSocketSession
 import io.ktor.http.takeFrom
@@ -188,6 +188,11 @@ class NotificationSocketRoutesIntegrationTest {
         override suspend fun notifyPartnerStatusChanged(
             targetUserId: String,
             event: com.pecadoartesano.features.notification.dto.PartnerStatusChangedEvent
+        ): Boolean = true
+
+        override suspend fun notifyPartnerUnlinked(
+            targetUserId: String,
+            event: com.pecadoartesano.features.notification.dto.PartnerUnlinkedEvent
         ): Boolean = true
     }
 }

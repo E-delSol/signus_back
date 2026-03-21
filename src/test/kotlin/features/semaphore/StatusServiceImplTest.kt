@@ -11,14 +11,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlinx.coroutines.test.runTest
 
-class StatusServiceTest {
+class StatusServiceImplTest {
 
     private val semaphoreRepository = mockk<SemaphoreRepositoryPort>()
     private val notificationOrchestrator = mockk<NotificationOrchestrator>()
-    private val statusService = StatusService(semaphoreRepository, notificationOrchestrator)
+    private val statusService = StatusServiceImpl(semaphoreRepository, notificationOrchestrator)
 
     @Test
-    fun `given new status when updateStatus then updates repository and notifies partner`() = runTest {
+    fun `given new status when updateStatus then updates repository and delegates notifications to orchestrator`() = runTest {
         // Given
         val expected = Semaphore(
             status = SemaphoreStatus.BUSY,
@@ -35,9 +35,7 @@ class StatusServiceTest {
 
         // Then
         assertEquals(expected, result)
-        coVerify(exactly = 1) {
-            notificationOrchestrator.notifyPartnerAboutStatusChange("user-1", SemaphoreStatus.BUSY)
-        }
+        coVerify(exactly = 1) { notificationOrchestrator.notifyPartnerAboutStatusChange("user-1", SemaphoreStatus.BUSY) }
     }
 
     @Test
@@ -51,5 +49,30 @@ class StatusServiceTest {
         }
 
         coVerify(exactly = 0) { notificationOrchestrator.notifyPartnerAboutStatusChange(any(), any()) }
+    }
+
+    @Test
+    fun `given orchestrator fails when updateStatus then still returns updated status`() = runTest {
+        // Given
+        val expected = Semaphore(
+            status = SemaphoreStatus.AVAILABLE,
+            userId = "user-1",
+            expiration = null,
+            duration = null
+        )
+
+        every { semaphoreRepository.updateUserStatus("user-1", SemaphoreStatus.AVAILABLE) } returns expected
+        coEvery {
+            notificationOrchestrator.notifyPartnerAboutStatusChange("user-1", SemaphoreStatus.AVAILABLE)
+        } throws IllegalStateException("notification error")
+
+        // When
+        val result = statusService.updateStatus("user-1", SemaphoreStatus.AVAILABLE)
+
+        // Then
+        assertEquals(expected, result)
+        coVerify(exactly = 1) {
+            notificationOrchestrator.notifyPartnerAboutStatusChange("user-1", SemaphoreStatus.AVAILABLE)
+        }
     }
 }

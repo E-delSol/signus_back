@@ -89,4 +89,40 @@ class UserRepositoryIntegrationTest {
         // Then
         assertNull(found)
     }
+
+    @Test
+    fun `given linked users when unlink users then clears partner on both sides`() {
+        // Given
+        val userA = User(
+            id = "user-a",
+            email = "usera@test.com",
+            passwordHash = "hash-a",
+            displayName = "User A",
+            partnerId = "user-b",
+            createdAt = 1L
+        )
+        val userB = User(
+            id = "user-b",
+            email = "userb@test.com",
+            passwordHash = "hash-b",
+            displayName = "User B",
+            partnerId = "user-a",
+            createdAt = 1L
+        )
+
+        repository.create(userA)
+        repository.create(userB)
+
+        // When
+        val unlinkedPartnerId = repository.unlinkUsers("user-a")
+        val userAAfter = repository.findById("user-a")
+        val userBAfter = repository.findById("user-b")
+
+        // Then
+        assertEquals("user-b", unlinkedPartnerId)
+        assertNotNull(userAAfter)
+        assertNotNull(userBAfter)
+        assertNull(userAAfter.partnerId)
+        assertNull(userBAfter.partnerId)
+    }
 }
