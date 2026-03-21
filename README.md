@@ -473,3 +473,11 @@ The tests cover:
 
 - OpenAPI/Swagger is present as a dependency, but there is no public route exposed by default.
 - Realtime/push migration documentation is kept in `REALTIME_NOTIFICATIONS_PLAN.md`.
+
+## License
+
+This project is source-available but not open source.
+
+You may view and study the code, but you are not allowed to use it for commercial purposes or deploy it as a service without explicit permission.
+
+See the LICENSE file for details.
