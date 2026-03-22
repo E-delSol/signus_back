@@ -1,6 +1,7 @@
 package com.pecadoartesano.features.notification
 
 import com.pecadoartesano.features.notification.dto.PartnerStatusChangedEvent
+import com.pecadoartesano.features.notification.dto.SelfStatusChangedEvent
 import com.pecadoartesano.features.notification.ports.PartnerLookupPort
 import com.pecadoartesano.features.notification.ports.RealtimeNotificationService
 import com.pecadoartesano.features.semaphore.SemaphoreStatus
@@ -14,13 +15,29 @@ class NotificationOrchestrator(
     private val logger = LoggerFactory.getLogger(NotificationOrchestrator::class.java)
 
     suspend fun notifyPartnerAboutStatusChange(senderId: String, newStatus: SemaphoreStatus) {
+        val timestamp = System.currentTimeMillis()
+
+        runCatching {
+            realtimeNotificationService.notifySelfStatusChanged(
+                targetUserId = senderId,
+                event = SelfStatusChangedEvent(
+                    userId = senderId,
+                    status = newStatus,
+                    statusExpiration = null,
+                    timestamp = timestamp
+                )
+            )
+        }.onFailure { throwable ->
+            logger.warn("Realtime self notification failed for user {}", senderId, throwable)
+        }
+
         val partner = partnerLookup.findPartnerByUserId(senderId) ?: return
 
         val event = PartnerStatusChangedEvent(
             partnerId = senderId,
             status = newStatus,
             statusExpiration = null,
-            timestamp = System.currentTimeMillis()
+            timestamp = timestamp
         )
 
         val deliveredRealtime = runCatching {
