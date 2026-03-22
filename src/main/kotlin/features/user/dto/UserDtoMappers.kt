@@ -18,5 +18,6 @@ fun UserState.toMeResponse(): MeResponse =
         status = status,
         statusExpiration = statusExpiration,
         statusDuration = statusDuration,
-        partnerId = partnerId
+        partnerId = partnerId,
+        displayName = displayName
     )
