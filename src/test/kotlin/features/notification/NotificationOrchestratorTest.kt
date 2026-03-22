@@ -1,6 +1,7 @@
 package com.pecadoartesano.features.notification
 
 import com.pecadoartesano.features.notification.dto.PartnerStatusChangedEvent
+import com.pecadoartesano.features.notification.dto.SelfStatusChangedEvent
 import com.pecadoartesano.features.notification.ports.PartnerLookupPort
 import com.pecadoartesano.features.notification.ports.RealtimeNotificationService
 import com.pecadoartesano.features.semaphore.SemaphoreStatus
@@ -23,11 +24,24 @@ class NotificationOrchestratorTest {
     fun `given sender without partner when notify then does nothing`() = runTest {
         // Given
         every { partnerLookup.findPartnerByUserId("sender-1") } returns null
+        coEvery { realtimeNotificationService.notifySelfStatusChanged("sender-1", any()) } returns true
 
         // When
         orchestrator.notifyPartnerAboutStatusChange("sender-1", SemaphoreStatus.AVAILABLE)
 
         // Then
+        coVerify(exactly = 1) {
+            realtimeNotificationService.notifySelfStatusChanged(
+                "sender-1",
+                match {
+                    it.type == "SELF_STATUS_CHANGED" &&
+                        it.userId == "sender-1" &&
+                        it.status == SemaphoreStatus.AVAILABLE &&
+                        it.statusExpiration == null &&
+                        it.timestamp > 0
+                }
+            )
+        }
         coVerify(exactly = 0) { realtimeNotificationService.notifyPartnerStatusChanged(any(), any()) }
         coVerify(exactly = 0) { partnerPushNotificationService.notifyUserDevices(any(), any(), any()) }
     }
@@ -37,6 +51,12 @@ class NotificationOrchestratorTest {
         // Given
         val partner = partner(id = "partner-1")
         every { partnerLookup.findPartnerByUserId("sender-1") } returns partner
+        coEvery {
+            realtimeNotificationService.notifySelfStatusChanged(
+                "sender-1",
+                any<SelfStatusChangedEvent>()
+            )
+        } returns true
         coEvery {
             realtimeNotificationService.notifyPartnerStatusChanged(
                 "partner-1",
@@ -48,6 +68,18 @@ class NotificationOrchestratorTest {
         orchestrator.notifyPartnerAboutStatusChange("sender-1", SemaphoreStatus.BUSY)
 
         // Then
+        coVerify(exactly = 1) {
+            realtimeNotificationService.notifySelfStatusChanged(
+                "sender-1",
+                match {
+                    it.type == "SELF_STATUS_CHANGED" &&
+                        it.userId == "sender-1" &&
+                        it.status == SemaphoreStatus.BUSY &&
+                        it.statusExpiration == null &&
+                        it.timestamp > 0
+                }
+            )
+        }
         coVerify(exactly = 1) {
             realtimeNotificationService.notifyPartnerStatusChanged(
                 "partner-1",
@@ -68,6 +100,7 @@ class NotificationOrchestratorTest {
         // Given
         val partner = partner(id = "partner-1")
         every { partnerLookup.findPartnerByUserId("sender-1") } returns partner
+        coEvery { realtimeNotificationService.notifySelfStatusChanged("sender-1", any()) } returns true
         coEvery { realtimeNotificationService.notifyPartnerStatusChanged("partner-1", any()) } returns false
         coEvery { partnerPushNotificationService.notifyUserDevices("partner-1", any(), any()) } returns
             PushDispatchResult(totalTokens = 1, attempted = 1, delivered = 1)
@@ -90,6 +123,7 @@ class NotificationOrchestratorTest {
         // Given
         val partner = partner(id = "partner-1")
         every { partnerLookup.findPartnerByUserId("sender-1") } returns partner
+        coEvery { realtimeNotificationService.notifySelfStatusChanged("sender-1", any()) } returns true
         coEvery { realtimeNotificationService.notifyPartnerStatusChanged("partner-1", any()) } returns true
 
         // When
@@ -116,6 +150,7 @@ class NotificationOrchestratorTest {
         // Given
         val partner = partner(id = "partner-1")
         every { partnerLookup.findPartnerByUserId("sender-1") } returns partner
+        coEvery { realtimeNotificationService.notifySelfStatusChanged("sender-1", any()) } returns true
         coEvery { realtimeNotificationService.notifyPartnerStatusChanged("partner-1", any()) } returns false
         coEvery { partnerPushNotificationService.notifyUserDevices("partner-1", any(), any()) } returns
             PushDispatchResult(totalTokens = 0, attempted = 0, delivered = 0)
@@ -132,6 +167,7 @@ class NotificationOrchestratorTest {
         // Given
         val partner = partner(id = "partner-1")
         every { partnerLookup.findPartnerByUserId("sender-1") } returns partner
+        coEvery { realtimeNotificationService.notifySelfStatusChanged("sender-1", any()) } returns true
         coEvery {
             realtimeNotificationService.notifyPartnerStatusChanged("partner-1", any())
         } throws IllegalStateException("socket closed")
@@ -150,6 +186,24 @@ class NotificationOrchestratorTest {
                 body = "Tu pareja ahora está BUSY"
             )
         }
+    }
+
+    @Test
+    fun `given self realtime throws when notify then still notifies partner`() = runTest {
+        // Given
+        val partner = partner(id = "partner-1")
+        every { partnerLookup.findPartnerByUserId("sender-1") } returns partner
+        coEvery {
+            realtimeNotificationService.notifySelfStatusChanged("sender-1", any())
+        } throws IllegalStateException("socket closed")
+        coEvery { realtimeNotificationService.notifyPartnerStatusChanged("partner-1", any()) } returns true
+
+        // When
+        orchestrator.notifyPartnerAboutStatusChange("sender-1", SemaphoreStatus.BUSY)
+
+        // Then
+        coVerify(exactly = 1) { realtimeNotificationService.notifyPartnerStatusChanged("partner-1", any()) }
+        coVerify(exactly = 0) { partnerPushNotificationService.notifyUserDevices(any(), any(), any()) }
     }
 
     private fun partner(id: String) = User(
