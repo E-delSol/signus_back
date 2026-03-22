@@ -9,5 +9,6 @@ data class MeResponse(
     val status: SemaphoreStatus?,
     val statusExpiration: Long?,
     val statusDuration: Long?,
-    val partnerId: String?
+    val partnerId: String?,
+    val displayName: String?,
 )
