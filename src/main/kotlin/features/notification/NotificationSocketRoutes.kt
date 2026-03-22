@@ -41,7 +41,7 @@ fun Route.notificationSocketRoutes(
                 // Keep connection alive; notifications are server-pushed.
             }
         } finally {
-            realtimeNotificationService.removeSession(userId)
+            realtimeNotificationService.removeSession(userId, this)
         }
     }
 }

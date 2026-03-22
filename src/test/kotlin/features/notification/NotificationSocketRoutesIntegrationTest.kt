@@ -181,9 +181,14 @@ class NotificationSocketRoutesIntegrationTest {
             registeredUserIds.add(userId)
         }
 
-        override fun removeSession(userId: String) {
+        override fun removeSession(userId: String, session: WebSocketSession) {
             removedUserIds.add(userId)
         }
+
+        override suspend fun notifySelfStatusChanged(
+            targetUserId: String,
+            event: com.pecadoartesano.features.notification.dto.SelfStatusChangedEvent
+        ): Boolean = true
 
         override suspend fun notifyPartnerStatusChanged(
             targetUserId: String,
