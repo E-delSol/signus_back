@@ -1,53 +1,57 @@
-# Signus Backend
+# ⚙️ Signus Backend
 
-Signus backend built with Kotlin and Ktor. It manages JWT authentication, linking between users, shared semaphore state, realtime delivery over WebSocket, and push fallback through FCM when the partner does not have an active websocket session.
+Backend API for a real-time system built with Kotlin and Ktor.
 
-## Overview
+This service manages authentication, user relationships, shared state, and **real-time communication with fallback delivery** using WebSockets and Firebase Cloud Messaging (FCM).
 
-The backend is the source of truth for:
+---
 
-- users and authentication
-- linking and unlinking between two users
-- current semaphore state (`AVAILABLE`, `BUSY`, `OFFLINE`)
-- websocket sessions for realtime events
-- FCM token registration per device
-- push fallback through FCM when realtime does not deliver
+## 🚀 Project Summary
 
-The Android app consumes this backend through HTTP + JWT + WebSocket. Firebase is no longer used for auth or database; currently it is only kept as push notification transport through FCM.
+This backend is the **core of the Signus system**, responsible for:
 
-## Migration status from Firebase
+* user authentication and identity
+* linking between two users
+* shared "semaphore" state (`AVAILABLE`, `BUSY`, `OFFLINE`)
+* real-time event delivery via WebSocket
+* fallback delivery via FCM when realtime is not available
 
-Already migrated to the custom backend:
+---
 
-- authentication
-- user persistence and partner relationships
-- linking through sessions and codes
-- reading `/me` and `/partner`
-- state change with `PATCH /status`
-- realtime events over WebSocket
-- unified websocket event contract:
-  - `PARTNER_STATUS_CHANGED`
-  - `PARTNER_UNLINKED`
-- FCM token registration and removal per device
-- backend fallback `realtime -> push` for status changes
+## 🌐 Part of the Signus Ecosystem
 
-Firebase currently keeps only this role:
+Signus is structured as a multi-repository system:
 
-- Firebase Cloud Messaging (FCM) to deliver push notifications
+* [signus_app](https://github.com/E-delSol/signus_app) — Android client
+* signus_back — Backend API (this repository)
+* [signus_infra](https://github.com/E-delSol/signus_infra) — Infrastructure and deployment
 
-It is not part of the current system:
+---
 
-- Firebase Auth
-- Firestore
-- Firebase Realtime Database
+## 🧩 What this project demonstrates
 
-## Current architecture
+* Designing a backend for **real-time user-to-user communication**
+* Implementing **WebSocket-based event delivery**
+* Building a **fallback system (WebSocket → Push notifications)**
+* Managing **state synchronization between distributed clients**
+* Structuring a backend using **feature-based architecture**
+* Integrating **JWT authentication, persistence, and messaging systems**
 
-The project follows a feature-based structure:
+---
 
-```text
+## 🏗️ Architecture
+
+The backend follows a feature-based modular structure:
+
+```text id="k1c5cx"
+routes → services → repositories → database
+```
+
+Project layout:
+
+```text id="7ehg8g"
 src/main/kotlin/
-  core/          # config, DI, plugins, security, database
+  core/
   features/
     auth/
     devicetoken/
@@ -57,345 +61,59 @@ src/main/kotlin/
     user/
 ```
 
-Responsibilities:
+### Responsibilities
 
-- routes: HTTP/WebSocket endpoints, basic validation, auth extraction
-- services: use cases and orchestration
-- repositories: persistence and DB mapping
-- core: cross-cutting infrastructure
+* **routes** → HTTP / WebSocket endpoints, validation, auth extraction
+* **services** → business logic and orchestration
+* **repositories** → persistence and DB mapping
+* **core** → shared infrastructure (config, DI, security, DB)
 
-General dependency flow:
+---
 
-```text
-routes -> services -> repositories -> database
-```
+## ⚡ Real-Time Delivery Model
 
-The backend uses Koin for DI, Flyway for migrations, and Exposed for data access.
+This system is built around a **hybrid real-time communication strategy**.
 
-## Technical stack
+### Primary channel: WebSocket
 
-- Kotlin
-- Ktor
-- PostgreSQL
-- Exposed
-- Flyway
-- Koin
-- JWT
-- WebSockets
-- Firebase Cloud Messaging
-- Docker / Docker Compose
-- Testcontainers
+* Each authenticated user can open a WebSocket session:
 
-## Configuration
+  ```
+  WS /ws?token=<jwt>
+  ```
 
-1. Copy the example file:
+* The backend pushes events directly to connected clients
 
-```bash
-cp .env.example .env
-```
+---
 
-2. Configure the required variables:
+### Fallback: FCM (Firebase Cloud Messaging)
 
-| Variable | Description |
-| --- | --- |
-| `DB_HOST` | PostgreSQL host |
-| `DB_PORT` | PostgreSQL port |
-| `DB_NAME` | Database name |
-| `DB_USER` | Database user |
-| `DB_PASSWORD` | Database password |
-| `PORT` | Backend HTTP port |
-| `JWT_SECRET` | Secret used to sign JWT |
-| `JWT_ISSUER` | JWT issuer |
-| `JWT_AUDIENCE` | JWT audience |
-| `JWT_REALM` | Realm configured in Ktor auth |
-| `JWT_EXPIRATION_TIME` | Token duration in ms |
-| `FCM_SERVER_KEY` | Credential used by the backend FCM provider |
+If real-time delivery is not possible:
 
-## Local execution
+* no active WebSocket session
+* app is in background
+* connection lost
 
-Full Docker mode:
+👉 the backend **automatically falls back to push notifications via FCM**
 
-```bash
-docker compose up --build
-```
+---
 
-Hybrid mode:
+### Key design insight
 
-```bash
-docker compose up -d db
-./gradlew run
-```
+* WebSocket = **low-latency realtime**
+* FCM = **delivery guarantee when realtime is unavailable**
 
-Stop services:
+👉 This ensures the system remains consistent even when clients are offline.
 
-```bash
-docker compose down
-```
+---
 
-Remove volumes:
+## 🔌 Event System
 
-```bash
-docker compose down -v
-```
+The backend emits domain events to clients:
 
-## Security
+### PARTNER_STATUS_CHANGED
 
-- Protected endpoints require `Authorization: Bearer <jwt>`.
-- The websocket requires `token` in the query string: `/ws?token=<jwt>`.
-- The JWT must include the `userId` claim.
-- Secrets must be provided through environment variables.
-
-## Real endpoints and contracts
-
-Local base URL:
-
-- HTTP: `http://localhost:8080`
-- WebSocket: `ws://localhost:8080`
-
-### Auth
-
-#### `POST /auth/register`
-
-Creates a user and returns JWT.
-
-Request:
-
-```json
-{
-  "email": "user@example.com",
-  "password": "secret123",
-  "displayName": "User"
-}
-```
-
-Response `201 Created`:
-
-```json
-{
-  "accessToken": "<jwt>"
-}
-```
-
-#### `POST /auth/login`
-
-Authenticates a user and returns JWT.
-
-Request:
-
-```json
-{
-  "email": "user@example.com",
-  "password": "secret123"
-}
-```
-
-Response `200 OK`:
-
-```json
-{
-  "accessToken": "<jwt>"
-}
-```
-
-### Linking sessions
-
-#### `POST /linking/sessions`
-
-Creates a linking session for the authenticated user.
-
-Response `201 Created`:
-
-```json
-{
-  "sessionId": "a6a21519-5d42-43d4-b6ea-e7f0c8187f32",
-  "linkCode": "ABC123",
-  "expiresAt": "2026-03-20T12:34:56Z"
-}
-```
-
-#### `POST /linking/sessions/confirm`
-
-Confirms an existing session using `linkCode`.
-
-Request:
-
-```json
-{
-  "linkCode": "ABC123"
-}
-```
-
-Response `200 OK`:
-
-```json
-{
-  "sessionId": "a6a21519-5d42-43d4-b6ea-e7f0c8187f32",
-  "status": "CONFIRMED"
-}
-```
-
-Relevant errors:
-
-- `400 Bad Request` if the code is invalid or if the user tries to link with themselves
-- `404 Not Found` if the session does not exist
-- `410 Gone` if the session expired
-- `409 Conflict` if the session was already confirmed
-
-#### `GET /linking/sessions/{id}`
-
-Checks the current state of a session.
-
-Response `200 OK`:
-
-```json
-{
-  "sessionId": "a6a21519-5d42-43d4-b6ea-e7f0c8187f32",
-  "status": "PENDING"
-}
-```
-
-Actual states: `PENDING`, `CONFIRMED`, `EXPIRED`.
-
-### Current user and partner
-
-#### `GET /me`
-
-Returns the current state of the authenticated user.
-
-Response `200 OK`:
-
-```json
-{
-  "id": "user-1",
-  "status": "BUSY",
-  "statusExpiration": null,
-  "statusDuration": null,
-  "partnerId": "user-2"
-}
-```
-
-#### `GET /partner`
-
-Returns the current state of the linked partner.
-
-Response `200 OK`:
-
-```json
-{
-  "id": "user-2",
-  "status": "AVAILABLE",
-  "statusExpiration": null,
-  "statusDuration": null,
-  "partnerId": "user-1"
-}
-```
-
-If the user does not have a linked partner, the route returns `404 Not Found`.
-
-#### `DELETE /partner`
-
-Unlinks the authenticated user from their current partner.
-
-Response `204 No Content`.
-
-If there is an active websocket on the partner, the backend emits the `PARTNER_UNLINKED` event. This flow currently does not use push fallback.
-
-### Semaphore state
-
-#### `PATCH /status`
-
-Updates the state of the authenticated user.
-
-Request:
-
-```json
-{
-  "status": "BUSY"
-}
-```
-
-Supported states: `AVAILABLE`, `BUSY`, `OFFLINE`.
-
-Response `200 OK`:
-
-```json
-{
-  "status": "BUSY",
-  "userId": "user-1",
-  "expiration": null,
-  "duration": null
-}
-```
-
-### FCM tokens per device
-
-#### `PUT /devices/fcm-token`
-
-Registers or updates the FCM token of the authenticated device.
-
-Request:
-
-```json
-{
-  "deviceId": "android-device-1",
-  "fcmToken": "fcm-token-value",
-  "platform": "android",
-  "appVersion": "1.0.0"
-}
-```
-
-Response `201 Created` when it creates a new record, or `200 OK` when it updates an existing one:
-
-```json
-{
-  "created": true,
-  "token": {
-    "id": "token-row-id",
-    "deviceId": "android-device-1",
-    "platform": "android",
-    "appVersion": "1.0.0",
-    "active": true,
-    "createdAt": 1710930000000,
-    "updatedAt": 1710930000000,
-    "lastRegisteredAt": 1710930000000,
-    "deactivatedAt": null
-  }
-}
-```
-
-Real notes:
-
-- `platform` only accepts `android`
-- the backend stores tokens by `userId + deviceId`
-- if the same `fcmToken` was active on another user or device, that previous record is deactivated
-
-#### `DELETE /devices/fcm-token/{deviceId}`
-
-Deactivates the active token associated with the authenticated user's `deviceId`.
-
-Response `204 No Content`.
-
-#### `GET /devices/fcm-token`
-
-Returns the tokens of the authenticated user. By default only active ones.
-
-Optional query param:
-
-- `includeInactive=true|false`
-
-### Realtime WebSocket
-
-#### `WS /ws?token=<jwt>`
-
-Registers the authenticated user's websocket session to receive server-push events.
-
-The client does not need to send business messages; the backend uses the connection to push events.
-
-Real events:
-
-#### `PARTNER_STATUS_CHANGED`
-
-```json
+```json id="w4y0cx"
 {
   "type": "PARTNER_STATUS_CHANGED",
   "partnerId": "user-1",
@@ -405,9 +123,9 @@ Real events:
 }
 ```
 
-#### `PARTNER_UNLINKED`
+### PARTNER_UNLINKED
 
-```json
+```json id="2mcm7c"
 {
   "type": "PARTNER_UNLINKED",
   "partnerId": "user-1",
@@ -415,69 +133,147 @@ Real events:
 }
 ```
 
-## Real flows
+---
+
+## 🔄 Core Flows
 
 ### Linking
 
-1. User A creates `POST /linking/sessions`.
-2. Backend generates `sessionId`, `linkCode`, and `expiresAt`.
-3. User B calls `POST /linking/sessions/confirm` with `linkCode`.
-4. Backend validates the session, expiration, and that it is not the same user.
-5. Backend links both users and marks the session as `CONFIRMED`.
+1. User A creates a linking session
+2. Backend generates `linkCode`
+3. User B confirms the session
+4. Backend links both users
+
+---
+
+### State Change
+
+1. Client calls `PATCH /status`
+2. Backend persists the new state
+3. Backend attempts WebSocket delivery
+4. If it fails → fallback to FCM
+
+---
 
 ### Unlinking
 
-1. A user calls `DELETE /partner`.
-2. Backend removes the partner relationship in DB.
-3. If the partner has an active websocket, backend sends `PARTNER_UNLINKED`.
-4. This flow does not perform push fallback in the current state.
+1. Client calls `DELETE /partner`
+2. Backend removes relationship
+3. Emits `PARTNER_UNLINKED` event if possible
 
-### State change
+---
 
-1. The app calls `PATCH /status`.
-2. Backend persists the new state.
-3. `StatusServiceImpl` delegates to `NotificationOrchestrator`.
-4. The orchestration looks up the partner.
-5. If there is a partner, it tries to send `PARTNER_STATUS_CHANGED` over websocket.
-6. If there is no active session or realtime delivery fails, it uses push fallback through FCM.
-7. If there is no partner, there are no active tokens, or a specific token fails, the state update is not reverted.
+## 🧰 Technical Stack
 
-### FCM token synchronization
+* **Kotlin**
+* **Ktor**
+* **PostgreSQL**
+* **Exposed**
+* **Flyway**
+* **Koin**
+* **JWT**
+* **WebSockets**
+* **Firebase Cloud Messaging (FCM)**
+* **Docker / Docker Compose**
+* **Testcontainers**
 
-1. The app gets or refreshes its FCM token.
-2. The app calls `PUT /devices/fcm-token` with `deviceId`, `fcmToken`, `platform`, and `appVersion`.
-3. Backend creates or updates the record in `user_device_tokens`.
-4. When the device is no longer valid or the user logs out, the app can call `DELETE /devices/fcm-token/{deviceId}` to deactivate the token.
+---
 
-## Development and testing
+## 🔐 Security
 
-Run tests:
+* JWT-based authentication
 
-```bash
-./gradlew test
+* Protected endpoints require:
+
+  ```
+  Authorization: Bearer <jwt>
+  ```
+
+* WebSocket authentication via query param
+
+* Secrets managed via environment variables
+
+---
+
+## ⚙️ Configuration
+
+Copy:
+
+```bash id="w7y9mb"
+cp .env.example .env
 ```
 
-Compile backend:
+Configure:
 
-```bash
-./gradlew --no-daemon clean compileKotlin
+* database credentials
+* JWT configuration
+* FCM server key
+* port
+
+---
+
+## ▶️ Local Execution
+
+### Full Docker
+
+```bash id="xrf8u1"
+docker compose up --build
 ```
 
-The tests cover:
+### Hybrid
 
-- feature services and contracts
-- HTTP and WebSocket routes
-- repositories with PostgreSQL through Testcontainers
+```bash id="s6p3mi"
+docker compose up -d db
+./gradlew run
+```
 
-## Notes
+---
 
-- OpenAPI/Swagger is present as a dependency, but there is no public route exposed by default.
-- Realtime/push migration documentation is kept in `REALTIME_NOTIFICATIONS_PLAN.md`.
+## 📡 API Overview
 
-## License
+Base URL:
 
-This project is source-available but not open source.
+* HTTP → `http://localhost:8080`
+* WS → `ws://localhost:8080`
 
-You may view and study the code, but you are not allowed to use it for commercial purposes or deploy it as a service without explicit permission.
+Main domains:
 
-See the LICENSE file for details.
+* authentication (`/auth`)
+* linking (`/linking`)
+* user (`/me`, `/partner`)
+* status (`/status`)
+* device tokens (`/devices/fcm-token`)
+* realtime (`/ws`)
+
+---
+
+## 🧠 Engineering Highlights
+
+* Real-time backend with **graceful degradation**
+* Clear separation of concerns across layers
+* Explicit handling of connection vs delivery guarantees
+* WebSocket + FCM hybrid strategy
+* Feature-based architecture for scalability
+* Backend-driven state consistency
+
+---
+
+## 📄 License
+
+This project is **source-available but not open source**.
+
+You may view and study the code, but you are not allowed to:
+
+* use it for commercial purposes
+* deploy it as a service
+* build competing products
+
+See [LICENSE](LICENSE) for details.
+
+---
+
+## 👤 Author
+
+E-delSol
+
+---
