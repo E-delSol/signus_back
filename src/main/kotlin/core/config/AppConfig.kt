@@ -16,8 +16,10 @@ fun loadConfig(): AppConfig {
         issuer = System.getenv("JWT_ISSUER") ?: error("issuer property not set"),
         audience = System.getenv("JWT_AUDIENCE") ?: error("audience property not set"),
         realm = System.getenv("JWT_REALM") ?: error("realm property not set"),
-        expiration = System.getenv("JWT_EXPIRATION_TIME")?.toLongOrNull()
-            ?: error("expiration property not set or invalid")
+        accessTokenExpiration = System.getenv("JWT_ACCESS_EXPIRATION_TIME")?.toLongOrNull()
+            ?: error("access token expiration property not set or invalid"),
+        refreshTokenExpiration = System.getenv("JWT_REFRESH_EXPIRATION_TIME")?.toLongOrNull()
+            ?: error("refresh token expiration property not set or invalid")
     )
 
     val databaseConfig = DatabaseConfig(

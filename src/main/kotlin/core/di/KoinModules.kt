@@ -6,8 +6,10 @@ import com.pecadoartesano.core.config.JwtConfig
 import com.pecadoartesano.core.security.JwtService
 import com.pecadoartesano.core.security.PasswordService
 import com.pecadoartesano.features.auth.AuthServiceImpl
+import com.pecadoartesano.features.auth.RefreshTokenRepository
 import com.pecadoartesano.features.auth.ports.AuthService
 import com.pecadoartesano.features.auth.ports.AuthUserRepositoryPort
+import com.pecadoartesano.features.auth.ports.RefreshTokenRepositoryPort
 import com.pecadoartesano.features.devicetoken.DeviceTokenRepository
 import com.pecadoartesano.features.devicetoken.DeviceTokenServiceImpl
 import com.pecadoartesano.features.devicetoken.ports.DeviceTokenRepositoryPort
@@ -43,6 +45,8 @@ fun appModules(appConfig: AppConfig): List<Module> = listOf(
 
         single { UserRepository() }
         single<AuthUserRepositoryPort> { get<UserRepository>() }
+        single { RefreshTokenRepository() }
+        single<RefreshTokenRepositoryPort> { get<RefreshTokenRepository>() }
         single<PartnerLookupPort> { get<UserRepository>() }
         single { SemaphoreRepository() }
         single<SemaphoreRepositoryPort> { get<SemaphoreRepository>() }
@@ -55,7 +59,15 @@ fun appModules(appConfig: AppConfig): List<Module> = listOf(
 
         single { PasswordService() }
         single { JwtService(get()) }
-        single<AuthService> { AuthServiceImpl(get(), get(), get()) }
+        single<AuthService> {
+            AuthServiceImpl(
+                userRepository = get(),
+                passwordService = get(),
+                jwtService = get(),
+                refreshTokenRepository = get(),
+                refreshTokenExpirationMillis = get<JwtConfig>().refreshTokenExpiration
+            )
+        }
         single<LinkingService> { LinkingServiceImpl(get(), get()) }
         single<UserService> { UserServiceImpl(get(), get(), get()) }
         single<DeviceTokenService> { DeviceTokenServiceImpl(get()) }
