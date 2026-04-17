@@ -16,7 +16,8 @@ fun testAppConfig(): AppConfig =
             issuer = "test-issuer",
             audience = "test-audience",
             realm = "test-realm",
-            expiration = 60_000L
+            accessTokenExpiration = 60_000L,
+            refreshTokenExpiration = 604_800_000L
         ),
         database = DatabaseConfig(
             host = "localhost",
@@ -36,7 +37,7 @@ fun createJwtToken(userId: String, jwtConfig: JwtConfig): String {
         .withIssuer(jwtConfig.issuer)
         .withAudience(jwtConfig.audience)
         .withClaim("userId", userId)
-        .withExpiresAt(Date(now + jwtConfig.expiration))
+        .withExpiresAt(Date(now + jwtConfig.accessTokenExpiration))
         .sign(Algorithm.HMAC256(jwtConfig.secret))
 }
 
@@ -57,7 +58,7 @@ fun createJwtTokenWithoutUserId(jwtConfig: JwtConfig): String {
     return JWT.create()
         .withIssuer(jwtConfig.issuer)
         .withAudience(jwtConfig.audience)
-        .withExpiresAt(Date(now + jwtConfig.expiration))
+        .withExpiresAt(Date(now + jwtConfig.accessTokenExpiration))
         .sign(Algorithm.HMAC256(jwtConfig.secret))
 }
 
@@ -67,6 +68,6 @@ fun createJwtTokenWithInvalidSignature(userId: String, jwtConfig: JwtConfig): St
         .withIssuer(jwtConfig.issuer)
         .withAudience(jwtConfig.audience)
         .withClaim("userId", userId)
-        .withExpiresAt(Date(now + jwtConfig.expiration))
+        .withExpiresAt(Date(now + jwtConfig.accessTokenExpiration))
         .sign(Algorithm.HMAC256("invalid-secret"))
 }

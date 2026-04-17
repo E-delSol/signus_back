@@ -183,6 +183,15 @@ The backend emits domain events to clients:
 
 * JWT-based authentication
 
+* `POST /auth/register` and `POST /auth/login` return:
+
+  * short-lived `accessToken`
+  * long-lived `refreshToken`
+
+* `POST /auth/refresh` exchanges a valid refresh token for a new access token
+
+* `POST /auth/logout` revokes the refresh token for the current session
+
 * Protected endpoints require:
 
   ```
