@@ -1,5 +1,6 @@
 package com.pecadoartesano.features.auth
 
+import com.auth0.jwt.JWT
 import com.pecadoartesano.core.exceptions.EmailAlreadyExistsException
 import com.pecadoartesano.core.security.JwtService
 import com.pecadoartesano.core.security.PasswordService
@@ -14,6 +15,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import support.testAppConfig
 
 class AuthServiceImplTest {
 
@@ -145,6 +149,55 @@ class AuthServiceImplTest {
         val result = authService.refresh("valid-refresh-token")
 
         assertEquals("new-access-token", result)
+    }
+
+    @Test
+    fun `given login and refresh flows when generating access tokens then jwt payload stays consistent`() {
+        val jwtConfig = testAppConfig().jwt
+        val realJwtService = JwtService(jwtConfig)
+        val localUserRepository = mockk<AuthUserRepositoryPort>()
+        val localPasswordService = mockk<PasswordService>()
+        val localRefreshTokenRepository = mockk<RefreshTokenRepositoryPort>()
+        var currentNow = 1_000L
+        val service = AuthServiceImpl(
+            userRepository = localUserRepository,
+            passwordService = localPasswordService,
+            jwtService = realJwtService,
+            refreshTokenRepository = localRefreshTokenRepository,
+            refreshTokenExpirationMillis = 5_000L,
+            nowProvider = { currentNow },
+            refreshTokenGenerator = { "refresh-token-value" }
+        )
+        val user = testUser(email = "user@test.com", passwordHash = "stored-hash")
+
+        every { localUserRepository.findByEmail("user@test.com") } returns user
+        every { localPasswordService.verify("secret", "stored-hash") } returns true
+        every { localRefreshTokenRepository.create(any()) } answers { firstArg() }
+        every { localRefreshTokenRepository.findByTokenHash(any()) } returns refreshSession(
+            userId = user.id,
+            expiresAt = 10_000L
+        )
+
+        val loginTokens = service.login(email = "user@test.com", rawPassword = "secret")
+
+        currentNow = 2_000L
+        val refreshedAccessToken = service.refresh("refresh-token-value")
+
+        val loginJwt = JWT.decode(loginTokens.accessToken)
+        val refreshJwt = JWT.decode(refreshedAccessToken)
+
+        assertEquals(loginJwt.issuer, refreshJwt.issuer)
+        assertEquals(loginJwt.audience, refreshJwt.audience)
+        assertEquals(loginJwt.getClaim("userId").asString(), refreshJwt.getClaim("userId").asString())
+        assertEquals(user.id, loginJwt.getClaim("userId").asString())
+        assertEquals(user.id, refreshJwt.getClaim("userId").asString())
+        assertNull(loginJwt.subject)
+        assertNull(refreshJwt.subject)
+        assertEquals("HS256", loginJwt.algorithm)
+        assertEquals("HS256", refreshJwt.algorithm)
+        assertTrue(refreshJwt.expiresAt.time >= loginJwt.expiresAt.time)
+        assertEquals(jwtConfig.issuer, refreshJwt.issuer)
+        assertEquals(listOf(jwtConfig.audience), refreshJwt.audience)
     }
 
     @Test
