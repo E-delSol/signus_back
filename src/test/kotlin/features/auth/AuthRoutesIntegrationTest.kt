@@ -2,6 +2,7 @@ package features.auth
 
 import com.pecadoartesano.configureApp
 import com.pecadoartesano.core.exceptions.EmailAlreadyExistsException
+import com.pecadoartesano.core.security.JwtService
 import com.pecadoartesano.features.auth.AuthSessionTokens
 import com.pecadoartesano.features.auth.InvalidRefreshTokenException
 import com.pecadoartesano.features.auth.RefreshTokenExpiredException
@@ -9,7 +10,11 @@ import com.pecadoartesano.features.auth.RefreshTokenRevokedException
 import com.pecadoartesano.features.auth.dto.AuthSessionResponse
 import com.pecadoartesano.features.auth.dto.RefreshSessionResponse
 import com.pecadoartesano.features.auth.ports.AuthService
+import com.pecadoartesano.features.semaphore.SemaphoreStatus
+import com.pecadoartesano.features.semaphore.UserState
+import com.pecadoartesano.features.user.ports.UserService
 import io.ktor.client.request.header
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
@@ -113,6 +118,59 @@ class AuthRoutesIntegrationTest {
         assertEquals(HttpStatusCode.OK, response.status)
         val body = decodeJson<RefreshSessionResponse>(response.bodyAsText())
         assertEquals("new-access-token", body.accessToken)
+    }
+
+    @Test
+    fun `given token returned by refresh when calling protected route then returns ok`() = testApplication {
+        val appConfig = testAppConfig()
+        val refreshedAccessToken = JwtService(appConfig.jwt).generateAccessToken("user-1")
+        val fakeAuthService = fakeAuthService(refreshResult = refreshedAccessToken)
+        val fakeUserService = object : UserService {
+            override fun register(email: String, rawPassword: String, displayName: String?) =
+                throw UnsupportedOperationException("Not used in this test")
+
+            override fun getCurrentUser(userId: String): UserState =
+                UserState(
+                    id = userId,
+                    partnerId = null,
+                    status = SemaphoreStatus.AVAILABLE,
+                    statusExpiration = null,
+                    statusDuration = null
+                )
+
+            override fun getCurrentPartner(userId: String): UserState =
+                throw UnsupportedOperationException("Not used in this test")
+
+            override suspend fun unlinkCurrentUser(userId: String) =
+                throw UnsupportedOperationException("Not used in this test")
+        }
+
+        application {
+            configureApp(
+                appConfig = appConfig,
+                startDatabase = false,
+                overrideModules = listOf(
+                    koinModule {
+                        single<AuthService> { fakeAuthService }
+                        single<UserService> { fakeUserService }
+                    }
+                )
+            )
+        }
+
+        val refreshResponse = client.post("/auth/refresh") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"refreshToken":"valid-refresh"}""")
+        }
+
+        assertEquals(HttpStatusCode.OK, refreshResponse.status)
+        val refreshBody = decodeJson<RefreshSessionResponse>(refreshResponse.bodyAsText())
+
+        val protectedResponse = client.get("/me") {
+            header(HttpHeaders.Authorization, "Bearer ${refreshBody.accessToken}")
+        }
+
+        assertEquals(HttpStatusCode.OK, protectedResponse.status)
     }
 
     @Test
