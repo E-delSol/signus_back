@@ -6,6 +6,7 @@ import com.pecadoartesano.core.config.AppConfig
 import com.pecadoartesano.core.config.DatabaseConfig
 import com.pecadoartesano.core.config.FcmConfig
 import com.pecadoartesano.core.config.JwtConfig
+import com.pecadoartesano.core.config.TokenCleanupConfig
 import java.util.Date
 import kotlinx.serialization.json.Json
 
@@ -26,7 +27,8 @@ fun testAppConfig(): AppConfig =
             user = "test",
             password = "test"
         ),
-        fcm = FcmConfig(serverKey = "test-fcm-key")
+        fcm = FcmConfig(serverKey = "test-fcm-key"),
+        tokenCleanup = TokenCleanupConfig(staleDays = 30)
     )
 
 val testJson: Json = Json { ignoreUnknownKeys = true }

@@ -15,4 +15,8 @@ interface DeviceTokenRepositoryPort {
     fun deactivateForUserDevice(userId: String, deviceId: String, nowMillis: Long): Boolean
 
     fun listByUserId(userId: String, includeInactive: Boolean): List<DeviceToken>
+
+    fun deactivateByFcmToken(fcmToken: String, reason: String): DeviceToken?
+
+    fun findActiveTokensOlderThan(threshold: Long): List<DeviceToken>
 }

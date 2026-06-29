@@ -6,6 +6,7 @@ import com.pecadoartesano.features.notification.ports.DeviceTokenLookupPort
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -133,6 +134,37 @@ class DeviceTokenRepository : DeviceTokenRepositoryPort, DeviceTokenLookupPort {
             .map { it.fcmToken }
             .distinct()
 
+    override fun deactivateByFcmToken(fcmToken: String, reason: String): DeviceToken? = transaction {
+        val now = System.currentTimeMillis()
+        val updatedRows = DeviceTokenTable.update({
+            (DeviceTokenTable.fcmToken eq fcmToken) and
+                (DeviceTokenTable.active eq true)
+        }) {
+            it[active] = false
+            it[updatedAt] = now
+            it[deactivatedAt] = now
+            it[deactivationReason] = reason
+        }
+
+        if (updatedRows == 0) return@transaction null
+
+        DeviceTokenTable
+            .selectAll()
+            .where { DeviceTokenTable.fcmToken eq fcmToken }
+            .map(::toDeviceToken)
+            .singleOrNull()
+    }
+
+    override fun findActiveTokensOlderThan(threshold: Long): List<DeviceToken> = transaction {
+        DeviceTokenTable
+            .selectAll()
+            .where {
+                (DeviceTokenTable.active eq true) and
+                    (DeviceTokenTable.lastRegisteredAt less threshold)
+            }
+            .map(::toDeviceToken)
+    }
+
     private fun toDeviceToken(row: ResultRow): DeviceToken =
         DeviceToken(
             id = row[DeviceTokenTable.id],
@@ -145,6 +177,7 @@ class DeviceTokenRepository : DeviceTokenRepositoryPort, DeviceTokenLookupPort {
             createdAt = row[DeviceTokenTable.createdAt],
             updatedAt = row[DeviceTokenTable.updatedAt],
             lastRegisteredAt = row[DeviceTokenTable.lastRegisteredAt],
-            deactivatedAt = row[DeviceTokenTable.deactivatedAt]
+            deactivatedAt = row[DeviceTokenTable.deactivatedAt],
+            deactivationReason = row[DeviceTokenTable.deactivationReason]
         )
 }

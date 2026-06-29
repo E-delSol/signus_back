@@ -3,7 +3,12 @@ package com.pecadoartesano.core.config
 data class AppConfig(
     val jwt: JwtConfig,
     val database: DatabaseConfig,
-    val fcm: FcmConfig
+    val fcm: FcmConfig,
+    val tokenCleanup: TokenCleanupConfig = TokenCleanupConfig()
+)
+
+data class TokenCleanupConfig(
+    val staleDays: Int = 30
 )
 
 data class FcmConfig(
@@ -34,9 +39,14 @@ fun loadConfig(): AppConfig {
         serverKey = System.getenv("FCM_SERVER_KEY") ?: error("fcmServerKey property not set")
     )
 
+    val tokenCleanupConfig = TokenCleanupConfig(
+        staleDays = System.getenv("TOKEN_STALE_DAYS")?.toIntOrNull() ?: 30
+    )
+
     return AppConfig(
         jwt = jwtConfig,
         database = databaseConfig,
-        fcm = fcmConfig
+        fcm = fcmConfig,
+        tokenCleanup = tokenCleanupConfig
     )
 }
