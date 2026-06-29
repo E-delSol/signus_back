@@ -80,7 +80,7 @@ fun appModules(appConfig: AppConfig): List<Module> = listOf(
 
         single<RealtimeNotificationService> { RealtimeNotificationServiceImpl() }
         single<PushProvider> { FcmPushProvider(serverKey = get<FcmConfig>().serverKey) }
-        single<PushNotificationService> { PartnerPushNotificationService(get(), get()) }
+        single<PushNotificationService> { PartnerPushNotificationService(get(), get(), get()) }
         single<NotificationMapper> { FcmNotificationMapper() }
         single<NotificationDispatcher> { NotificationDispatcherImpl(get(), get(), get()) }
         single<StatusService> { StatusServiceImpl(get(), get()) }

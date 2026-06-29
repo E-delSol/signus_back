@@ -87,11 +87,26 @@ class NotificationDispatcherImpl(
 
     private suspend fun pushFallback(targetUserId: String, event: NotificationEvent) {
         val payload = mapper.toPayload(event)
-        pushService.notifyUser(
+        val result = pushService.notifyUser(
             targetUserId = targetUserId,
             title = payload.title,
             body = payload.body,
             data = payload.data
         )
+
+        if (result.permanentFailures.isNotEmpty()) {
+            logger.warn(
+                "Push fallback for user {}: {} permanent failures ({}). Deactivated tokens will not be retried.",
+                targetUserId, result.permanentFailures.size,
+                result.permanentFailures.joinToString(", ") { "${it.token}:${it.reason}" }
+            )
+        }
+        if (result.temporaryFailures.isNotEmpty()) {
+            logger.warn(
+                "Push fallback for user {}: {} temporary failures ({}). Some tokens may not have received the notification.",
+                targetUserId, result.temporaryFailures.size,
+                result.temporaryFailures.joinToString(", ") { "${it.token}:${it.reason}" }
+            )
+        }
     }
 }
