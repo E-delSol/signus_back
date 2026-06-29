@@ -3,6 +3,7 @@ package com.pecadoartesano.core.di
 import com.pecadoartesano.core.config.AppConfig
 import com.pecadoartesano.core.config.FcmConfig
 import com.pecadoartesano.core.config.JwtConfig
+import com.pecadoartesano.core.config.TokenCleanupConfig
 import com.pecadoartesano.core.security.JwtService
 import com.pecadoartesano.core.security.PasswordService
 import com.pecadoartesano.features.auth.AuthServiceImpl
@@ -46,6 +47,7 @@ fun appModules(appConfig: AppConfig): List<Module> = listOf(
         single<AppConfig> { appConfig }
         single<JwtConfig> { appConfig.jwt }
         single<FcmConfig> { appConfig.fcm }
+        single<TokenCleanupConfig> { appConfig.tokenCleanup }
 
         single { UserRepository() }
         single<AuthUserRepositoryPort> { get<UserRepository>() }
