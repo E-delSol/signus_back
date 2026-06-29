@@ -98,9 +98,13 @@ dependencies {
     implementation(libs.koin.core)
     implementation(libs.koin.logger)
 
+    // Google Auth — FCM v1 OAuth2
+    implementation(libs.google.auth.library.oauth2.http)
+
     // Testing
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.ktor.client.websockets)
+    testImplementation(libs.ktor.client.mock)
     testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.koin.test)
     testImplementation(libs.koin.test.junit4)

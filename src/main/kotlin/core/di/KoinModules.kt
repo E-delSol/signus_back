@@ -4,6 +4,7 @@ import com.pecadoartesano.core.config.AppConfig
 import com.pecadoartesano.core.config.FcmConfig
 import com.pecadoartesano.core.config.JwtConfig
 import com.pecadoartesano.core.config.TokenCleanupConfig
+import com.google.auth.oauth2.GoogleCredentials
 import com.pecadoartesano.core.security.JwtService
 import com.pecadoartesano.core.security.PasswordService
 import com.pecadoartesano.features.auth.AuthServiceImpl
@@ -24,6 +25,7 @@ import com.pecadoartesano.features.linking.ports.LinkingUserRepositoryPort
 import com.pecadoartesano.features.notification.NotificationDispatcherImpl
 import com.pecadoartesano.features.notification.PartnerPushNotificationService
 import com.pecadoartesano.features.notification.PushProvider
+import com.pecadoartesano.features.notification.PushResult
 import com.pecadoartesano.features.notification.RealtimeNotificationServiceImpl
 import com.pecadoartesano.features.notification.ports.DeviceTokenLookupPort
 import com.pecadoartesano.features.notification.ports.NotificationDispatcher
@@ -33,6 +35,7 @@ import com.pecadoartesano.features.notification.ports.PushNotificationService
 import com.pecadoartesano.features.notification.ports.RealtimeNotificationService
 import com.pecadoartesano.features.notification.providers.FcmNotificationMapper
 import com.pecadoartesano.features.notification.providers.FcmPushProvider
+import java.io.ByteArrayInputStream
 import com.pecadoartesano.features.semaphore.SemaphoreRepository
 import com.pecadoartesano.features.semaphore.StatusServiceImpl
 import com.pecadoartesano.features.semaphore.ports.SemaphoreRepositoryPort
@@ -42,6 +45,7 @@ import com.pecadoartesano.features.user.UserServiceImpl
 import com.pecadoartesano.features.user.ports.UserService
 import org.koin.core.module.Module
 import org.koin.dsl.module
+import org.slf4j.LoggerFactory
 
 fun appModules(appConfig: AppConfig): List<Module> = listOf(
     module {
@@ -81,7 +85,30 @@ fun appModules(appConfig: AppConfig): List<Module> = listOf(
         single<DeviceTokenCleanupScheduler> { DeviceTokenCleanupScheduler(get(), get()) }
 
         single<RealtimeNotificationService> { RealtimeNotificationServiceImpl() }
-        single<PushProvider> { FcmPushProvider(serverKey = get<FcmConfig>().serverKey) }
+        single<PushProvider> {
+            val config = get<FcmConfig>()
+            val credentials = try {
+                GoogleCredentials.fromStream(
+                    ByteArrayInputStream(config.serviceAccountJson.toByteArray())
+                ).createScoped("https://www.googleapis.com/auth/firebase.messaging")
+            } catch (e: Exception) {
+                LoggerFactory.getLogger("KoinModules").warn(
+                    "Failed to initialize GoogleCredentials, using fallback provider", e
+                )
+                null
+            }
+            if (credentials != null) {
+                FcmPushProvider(projectId = config.projectId, credentials = credentials)
+            } else {
+                object : PushProvider {
+                    override suspend fun sendPush(
+                        targetUserId: String, token: String, title: String, body: String
+                    ): PushResult = PushResult.TemporaryFailure(
+                        token = token, reason = "credentials_init_error", errorCode = "CREDENTIALS_ERROR"
+                    )
+                }
+            }
+        }
         single<PushNotificationService> { PartnerPushNotificationService(get(), get(), get()) }
         single<NotificationMapper> { FcmNotificationMapper() }
         single<NotificationDispatcher> { NotificationDispatcherImpl(get(), get(), get()) }
