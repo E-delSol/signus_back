@@ -98,7 +98,7 @@ fun appModules(appConfig: AppConfig): List<Module> = listOf(
                 null
             }
             if (credentials != null) {
-                FcmPushProvider(projectId = config.projectId, credentials = credentials)
+                FcmPushProvider(serviceAccountJson = config.serviceAccountJson, credentials = credentials)
             } else {
                 object : PushProvider {
                     override suspend fun sendPush(
