@@ -1,24 +1,24 @@
 package com.pecadoartesano.features.notification.providers
 
+import com.google.auth.oauth2.GoogleCredentials
 import com.pecadoartesano.features.notification.FcmErrorClassifier
 import com.pecadoartesano.features.notification.PushResult
 import com.pecadoartesano.features.notification.PushProvider
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
-import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 class FcmPushProvider(
-    private val serverKey: String,
-    private val endpoint: String = "https://fcm.googleapis.com/fcm/send",
+    private val projectId: String,
+    private val credentials: GoogleCredentials,
     private val client: HttpClient = HttpClient {
         install(ContentNegotiation) {
             json()
@@ -26,85 +26,117 @@ class FcmPushProvider(
     }
 ) : PushProvider {
 
+    private val fcmEndpoint = "https://fcm.googleapis.com/v1/projects/$projectId/messages:send"
+
     override suspend fun sendPush(targetUserId: String, token: String, title: String, body: String): PushResult {
-        val response = client.post(endpoint) {
-            contentType(ContentType.Application.Json)
-            headers.append(HttpHeaders.Authorization, "key=$serverKey")
-            setBody(
-                FcmRequest(
-                    to = token,
-                    notification = FcmNotification(title, body),
-                    data = mapOf("targetUserId" to targetUserId)
-                )
-            )
+        return try {
+            val accessToken = credentials.getAccessToken().tokenValue
+            val response = client.post(fcmEndpoint) {
+                header(HttpHeaders.Authorization, "Bearer $accessToken")
+                contentType(ContentType.Application.Json)
+                setBody(buildV1Message(token, targetUserId, title, body))
+            }
+            val responseBody = try {
+                response.body<FcmV1Response>()
+            } catch (e: Exception) {
+                null
+            }
+            parseFcmV1ResponseBody(token, response.status.value, responseBody)
+        } catch (e: Exception) {
+            PushResult.TemporaryFailure(token, e.message ?: "unknown", "EXCEPTION")
         }
-
-        return parseFcmHttpResponse(response, token)
     }
 }
 
-/**
- * Check if an HTTP status code indicates success, returning a [PushResult.TemporaryFailure] if not.
- */
-internal fun checkHttpStatus(token: String, statusCode: Int): PushResult? {
-    if (statusCode !in 200..299) {
-        return PushResult.TemporaryFailure(
-            token = token,
-            reason = "http_error_$statusCode",
-            errorCode = "HTTP_ERROR"
-        )
-    }
-    return null
-}
-
-/**
- * Parse an [FcmResponse] body into a [PushResult] for the given [token].
- *
- * Pure function — no HTTP dependency. Extracted for testability.
- */
-internal fun parseFcmResponse(token: String, fcmResponse: FcmResponse): PushResult {
-    val result = fcmResponse.results.firstOrNull()
-        ?: return PushResult.PermanentFailure(
-            token = token,
-            reason = "empty_results",
-            errorCode = "EMPTY_RESULTS"
-        )
-    return result.error?.let { error ->
-        FcmErrorClassifier.classify(token, error)
-    } ?: PushResult.Success(token)
-}
-
-/**
- * Parse an FCM HTTP response into a [PushResult].
- *
- * Combines HTTP status check with response body parsing.
- */
-internal suspend fun parseFcmHttpResponse(response: HttpResponse, token: String): PushResult {
-    checkHttpStatus(token, response.status.value)?.let { return it }
-    return parseFcmResponse(token, response.body())
-}
+// ── FCM v1 models ──────────────────────────────────────────────────────────
 
 @Serializable
-internal data class FcmRequest(
-    val to: String,
-    val notification: FcmNotification,
-    val data: Map<String, String>
+internal data class FcmV1Request(
+    val message: FcmV1Message
 )
 
 @Serializable
-internal data class FcmNotification(
+internal data class FcmV1Message(
+    val token: String,
+    val notification: FcmV1Notification? = null,
+    val data: Map<String, String>? = null
+)
+
+@Serializable
+internal data class FcmV1Notification(
     val title: String,
     val body: String
 )
 
+/**
+ * Combined response model for FCM v1 HTTP API.
+ *
+ * Successful response: `{"name":"projects/.../messages/..."}`
+ * Error response: `{"error":{"status":"UNREGISTERED",...}}`
+ */
 @Serializable
-internal data class FcmResponse(
-    @SerialName("success") val success: Int = 0,
-    @SerialName("failure") val failure: Int = 0,
-    @SerialName("results") val results: List<FcmResult> = emptyList()
+internal data class FcmV1Response(
+    val name: String? = null,
+    val error: FcmV1Error? = null
 )
 
 @Serializable
-internal data class FcmResult(
-    @SerialName("error") val error: String? = null
+internal data class FcmV1Error(
+    val status: String? = null,
+    val message: String? = null
 )
+
+/**
+ * Pure function to parse an FCM v1 HTTP response body into a [PushResult].
+ *
+ * @param token   The FCM token that was targeted.
+ * @param statusCode  The HTTP status code from the FCM v1 response.
+ * @param body    The deserialized response body (or null if unparseable).
+ */
+internal fun parseFcmV1ResponseBody(
+    token: String,
+    statusCode: Int,
+    body: FcmV1Response?
+): PushResult {
+    if (body == null) {
+        return if (statusCode in 200..299) {
+            PushResult.PermanentFailure(token, "parse_error", "PARSE_ERROR")
+        } else {
+            PushResult.TemporaryFailure(token, "http_error_$statusCode", "HTTP_ERROR")
+        }
+    }
+
+    if (statusCode in 200..299) {
+        return if (body.name != null) {
+            PushResult.Success(token)
+        } else {
+            PushResult.PermanentFailure(token, "parse_error", "PARSE_ERROR")
+        }
+    }
+
+    // Error response
+    val errorStatus = body.error?.status
+    return if (errorStatus != null) {
+        FcmErrorClassifier.classify(token, errorStatus)
+    } else {
+        PushResult.TemporaryFailure(token, "http_error_$statusCode", "HTTP_ERROR")
+    }
+}
+
+/**
+ * Build a [FcmV1Request] from individual push parameters.
+ */
+internal fun buildV1Message(
+    token: String,
+    targetUserId: String,
+    title: String,
+    body: String
+): FcmV1Request {
+    return FcmV1Request(
+        message = FcmV1Message(
+        token = token,
+        notification = FcmV1Notification(title, body),
+        data = mapOf("targetUserId" to targetUserId)
+        )
+    )
+}

@@ -12,7 +12,8 @@ data class TokenCleanupConfig(
 )
 
 data class FcmConfig(
-    val serverKey: String
+    val projectId: String,
+    val serviceAccountJson: String
 )
 
 fun loadConfig(): AppConfig {
@@ -36,7 +37,8 @@ fun loadConfig(): AppConfig {
     )
 
     val fcmConfig = FcmConfig(
-        serverKey = System.getenv("FCM_SERVER_KEY") ?: error("fcmServerKey property not set")
+        projectId = System.getenv("FCM_PROJECT_ID") ?: error("fcmProjectId property not set"),
+        serviceAccountJson = System.getenv("FCM_SERVICE_ACCOUNT_JSON") ?: error("fcmServiceAccountJson property not set")
     )
 
     val tokenCleanupConfig = TokenCleanupConfig(
