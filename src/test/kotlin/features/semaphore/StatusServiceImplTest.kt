@@ -1,6 +1,7 @@
 package com.pecadoartesano.features.semaphore
 
-import com.pecadoartesano.features.notification.NotificationOrchestrator
+import com.pecadoartesano.features.notification.NotificationEvent
+import com.pecadoartesano.features.notification.ports.NotificationDispatcher
 import com.pecadoartesano.features.semaphore.ports.SemaphoreRepositoryPort
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -14,11 +15,11 @@ import kotlinx.coroutines.test.runTest
 class StatusServiceImplTest {
 
     private val semaphoreRepository = mockk<SemaphoreRepositoryPort>()
-    private val notificationOrchestrator = mockk<NotificationOrchestrator>()
-    private val statusService = StatusServiceImpl(semaphoreRepository, notificationOrchestrator)
+    private val notificationDispatcher = mockk<NotificationDispatcher>()
+    private val statusService = StatusServiceImpl(semaphoreRepository, notificationDispatcher)
 
     @Test
-    fun `given new status when updateStatus then updates repository and delegates notifications to orchestrator`() = runTest {
+    fun `given new status when updateStatus then updates repository and dispatches self notification`() = runTest {
         // Given
         val expected = Semaphore(
             status = SemaphoreStatus.BUSY,
@@ -28,14 +29,22 @@ class StatusServiceImplTest {
         )
 
         every { semaphoreRepository.updateUserStatus("user-1", SemaphoreStatus.BUSY) } returns expected
-        coEvery { notificationOrchestrator.notifyPartnerAboutStatusChange("user-1", SemaphoreStatus.BUSY) } returns Unit
+        coEvery { notificationDispatcher.dispatch(any()) } returns Unit
 
         // When
         val result = statusService.updateStatus("user-1", SemaphoreStatus.BUSY)
 
         // Then
         assertEquals(expected, result)
-        coVerify(exactly = 1) { notificationOrchestrator.notifyPartnerAboutStatusChange("user-1", SemaphoreStatus.BUSY) }
+        coVerify(exactly = 1) {
+            notificationDispatcher.dispatch(
+                match { event ->
+                    event is NotificationEvent.SelfStatusChanged &&
+                        event.userId == "user-1" &&
+                        event.status == SemaphoreStatus.BUSY
+                }
+            )
+        }
     }
 
     @Test
@@ -48,11 +57,11 @@ class StatusServiceImplTest {
             statusService.updateStatus("user-1", SemaphoreStatus.BUSY)
         }
 
-        coVerify(exactly = 0) { notificationOrchestrator.notifyPartnerAboutStatusChange(any(), any()) }
+        coVerify(exactly = 0) { notificationDispatcher.dispatch(any()) }
     }
 
     @Test
-    fun `given orchestrator fails when updateStatus then still returns updated status`() = runTest {
+    fun `given dispatcher fails when updateStatus then still returns updated status`() = runTest {
         // Given
         val expected = Semaphore(
             status = SemaphoreStatus.AVAILABLE,
@@ -63,7 +72,7 @@ class StatusServiceImplTest {
 
         every { semaphoreRepository.updateUserStatus("user-1", SemaphoreStatus.AVAILABLE) } returns expected
         coEvery {
-            notificationOrchestrator.notifyPartnerAboutStatusChange("user-1", SemaphoreStatus.AVAILABLE)
+            notificationDispatcher.dispatch(any())
         } throws IllegalStateException("notification error")
 
         // When
@@ -72,7 +81,13 @@ class StatusServiceImplTest {
         // Then
         assertEquals(expected, result)
         coVerify(exactly = 1) {
-            notificationOrchestrator.notifyPartnerAboutStatusChange("user-1", SemaphoreStatus.AVAILABLE)
+            notificationDispatcher.dispatch(
+                match { event ->
+                    event is NotificationEvent.SelfStatusChanged &&
+                        event.userId == "user-1" &&
+                        event.status == SemaphoreStatus.AVAILABLE
+                }
+            )
         }
     }
 }
