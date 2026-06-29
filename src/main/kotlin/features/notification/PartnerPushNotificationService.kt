@@ -24,7 +24,7 @@ class PartnerPushNotificationService(
 
         var delivered = 0
         activeTokens.forEach { token ->
-            val sent = runCatching {
+            val result = runCatching {
                 pushProvider.sendPush(
                     targetUserId = targetUserId,
                     token = token,
@@ -33,11 +33,14 @@ class PartnerPushNotificationService(
                 )
             }.onFailure { throwable ->
                 logger.warn("Push send failed for user {} token {}", targetUserId, token, throwable)
-            }.getOrDefault(false)
+            }.getOrDefault(
+                PushResult.TemporaryFailure(token, "exception", "UNKNOWN")
+            )
 
-            if (sent) {
+            if (result is PushResult.Success) {
                 delivered++
             }
+            // Phase 3 will add deactivation logic for PermanentFailure
         }
 
         return PushDispatchResult(
