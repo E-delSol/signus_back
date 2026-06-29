@@ -11,6 +11,7 @@ import com.pecadoartesano.features.auth.RefreshTokenRepository
 import com.pecadoartesano.features.auth.ports.AuthService
 import com.pecadoartesano.features.auth.ports.AuthUserRepositoryPort
 import com.pecadoartesano.features.auth.ports.RefreshTokenRepositoryPort
+import com.pecadoartesano.features.devicetoken.DeviceTokenCleanupScheduler
 import com.pecadoartesano.features.devicetoken.DeviceTokenRepository
 import com.pecadoartesano.features.devicetoken.DeviceTokenServiceImpl
 import com.pecadoartesano.features.devicetoken.ports.DeviceTokenRepositoryPort
@@ -77,6 +78,7 @@ fun appModules(appConfig: AppConfig): List<Module> = listOf(
         single<LinkingService> { LinkingServiceImpl(get(), get()) }
         single<UserService> { UserServiceImpl(get(), get(), get()) }
         single<DeviceTokenService> { DeviceTokenServiceImpl(get()) }
+        single<DeviceTokenCleanupScheduler> { DeviceTokenCleanupScheduler(get(), get()) }
 
         single<RealtimeNotificationService> { RealtimeNotificationServiceImpl() }
         single<PushProvider> { FcmPushProvider(serverKey = get<FcmConfig>().serverKey) }
