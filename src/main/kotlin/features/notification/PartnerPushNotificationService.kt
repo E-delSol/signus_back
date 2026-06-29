@@ -1,15 +1,21 @@
 package com.pecadoartesano.features.notification
 
 import com.pecadoartesano.features.notification.ports.DeviceTokenLookupPort
+import com.pecadoartesano.features.notification.ports.PushNotificationService
 import org.slf4j.LoggerFactory
 
 class PartnerPushNotificationService(
     private val deviceTokenLookup: DeviceTokenLookupPort,
     private val pushProvider: PushProvider
-) {
+) : PushNotificationService {
     private val logger = LoggerFactory.getLogger(PartnerPushNotificationService::class.java)
 
-    suspend fun notifyUserDevices(targetUserId: String, title: String, body: String): PushDispatchResult {
+    override suspend fun notifyUser(
+        targetUserId: String,
+        title: String,
+        body: String,
+        data: Map<String, String>
+    ): PushDispatchResult {
         val activeTokens = deviceTokenLookup.findActiveFcmTokensByUserId(targetUserId)
         if (activeTokens.isEmpty()) {
             logger.info("No active FCM tokens found for user {}", targetUserId)

@@ -19,13 +19,17 @@ import com.pecadoartesano.features.linking.LinkingServiceImpl
 import com.pecadoartesano.features.linking.ports.LinkSessionRepositoryPort
 import com.pecadoartesano.features.linking.ports.LinkingService
 import com.pecadoartesano.features.linking.ports.LinkingUserRepositoryPort
-import com.pecadoartesano.features.notification.NotificationOrchestrator
+import com.pecadoartesano.features.notification.NotificationDispatcherImpl
 import com.pecadoartesano.features.notification.PartnerPushNotificationService
 import com.pecadoartesano.features.notification.PushProvider
 import com.pecadoartesano.features.notification.RealtimeNotificationServiceImpl
 import com.pecadoartesano.features.notification.ports.DeviceTokenLookupPort
+import com.pecadoartesano.features.notification.ports.NotificationDispatcher
+import com.pecadoartesano.features.notification.ports.NotificationMapper
 import com.pecadoartesano.features.notification.ports.PartnerLookupPort
+import com.pecadoartesano.features.notification.ports.PushNotificationService
 import com.pecadoartesano.features.notification.ports.RealtimeNotificationService
+import com.pecadoartesano.features.notification.providers.FcmNotificationMapper
 import com.pecadoartesano.features.notification.providers.FcmPushProvider
 import com.pecadoartesano.features.semaphore.SemaphoreRepository
 import com.pecadoartesano.features.semaphore.StatusServiceImpl
@@ -74,8 +78,9 @@ fun appModules(appConfig: AppConfig): List<Module> = listOf(
 
         single<RealtimeNotificationService> { RealtimeNotificationServiceImpl() }
         single<PushProvider> { FcmPushProvider(serverKey = get<FcmConfig>().serverKey) }
-        single { PartnerPushNotificationService(get(), get()) }
-        single { NotificationOrchestrator(get(), get(), get()) }
+        single<PushNotificationService> { PartnerPushNotificationService(get(), get()) }
+        single<NotificationMapper> { FcmNotificationMapper() }
+        single<NotificationDispatcher> { NotificationDispatcherImpl(get(), get(), get()) }
         single<StatusService> { StatusServiceImpl(get(), get()) }
     }
 )
