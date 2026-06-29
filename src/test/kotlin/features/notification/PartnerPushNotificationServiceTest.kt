@@ -32,9 +32,9 @@ class PartnerPushNotificationServiceTest {
     fun `given multiple active tokens when notify user then attempts all and counts deliveries`() = runTest {
         // Given
         every { deviceTokenLookup.findActiveFcmTokensByUserId("partner-1") } returns listOf("t1", "t2", "t3")
-        coEvery { pushProvider.sendPush("partner-1", "t1", any(), any()) } returns true
-        coEvery { pushProvider.sendPush("partner-1", "t2", any(), any()) } returns false
-        coEvery { pushProvider.sendPush("partner-1", "t3", any(), any()) } returns true
+        coEvery { pushProvider.sendPush("partner-1", "t1", any(), any()) } returns PushResult.Success("t1")
+        coEvery { pushProvider.sendPush("partner-1", "t2", any(), any()) } returns PushResult.PermanentFailure("t2", "unregistered", "UNREGISTERED")
+        coEvery { pushProvider.sendPush("partner-1", "t3", any(), any()) } returns PushResult.Success("t3")
 
         // When
         val result = service.notifyUser("partner-1", "Estado actualizado", "Tu pareja ahora está BUSY")
@@ -49,7 +49,7 @@ class PartnerPushNotificationServiceTest {
         // Given
         every { deviceTokenLookup.findActiveFcmTokensByUserId("partner-1") } returns listOf("t1", "t2")
         coEvery { pushProvider.sendPush("partner-1", "t1", any(), any()) } throws IllegalStateException("network")
-        coEvery { pushProvider.sendPush("partner-1", "t2", any(), any()) } returns true
+        coEvery { pushProvider.sendPush("partner-1", "t2", any(), any()) } returns PushResult.Success("t2")
 
         // When
         val result = service.notifyUser("partner-1", "Estado actualizado", "Tu pareja ahora está OFFLINE")
