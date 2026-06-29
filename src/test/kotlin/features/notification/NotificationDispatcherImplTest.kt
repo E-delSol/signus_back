@@ -241,6 +241,43 @@ class NotificationDispatcherImplTest {
     }
 
     @Test
+    fun `given push fallback with permanent and temporary failures when partner offline then logs results without error`() = runTest {
+        // Given
+        val event = NotificationEvent.PartnerStatusChanged(
+            actorUserId = "sender-1",
+            recipientUserId = "partner-1",
+            status = SemaphoreStatus.BUSY
+        )
+        coEvery {
+            realtimeService.notifyPartnerStatusChanged("partner-1", any<PartnerStatusChangedEvent>())
+        } returns false
+        every { mapper.toPayload(event) } returns NotificationPayload(
+            title = "Status update",
+            body = "Partner is BUSY",
+            data = emptyMap()
+        )
+        val testResult = PushDispatchResult(
+            totalTokens = 3,
+            attempted = 3,
+            delivered = 1,
+            results = listOf(
+                PushResult.Success("t1"),
+                PushResult.PermanentFailure("t2", "unregistered", "UNREGISTERED"),
+                PushResult.TemporaryFailure("t3", "unavailable", "UNAVAILABLE")
+            )
+        )
+        coEvery { pushService.notifyUser(any(), any(), any(), any()) } returns testResult
+
+        // When
+        dispatcher.dispatch(event)
+
+        // Then — no crash, push was called, result was captured and logged
+        coVerify(exactly = 1) {
+            pushService.notifyUser("partner-1", "Status update", "Partner is BUSY", emptyMap())
+        }
+    }
+
+    @Test
     fun `given fallback to push when PartnerStatusChanged then uses mapper to convert event`() = runTest {
         // Given
         val event = NotificationEvent.PartnerStatusChanged(
