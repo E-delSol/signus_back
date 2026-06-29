@@ -22,6 +22,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlinx.coroutines.test.runTest
 
+private val testServiceAccountJson = """{"type":"service_account","project_id":"test-project","private_key_id":"test","private_key":"-----BEGIN PRIVATE KEY-----\nMIIBVAIBADANBgkqhkiG9w0BAQEFAASCAT4wggE6AgEAAkEA\n-----END PRIVATE KEY-----\n","client_email":"test@test.iam.gserviceaccount.com","client_id":"123","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_x509_cert_url":"https://www.googleapis.com/robot/v1/metadata/x509/test@test.iam.gserviceaccount.com"}"""
+
 class FcmPushProviderTest {
 
     // ── parseFcmV1ResponseBody unit tests ──────────────────────────────────
@@ -115,7 +117,7 @@ class FcmPushProviderTest {
             install(ContentNegotiation) { json() }
         }
 
-        val provider = FcmPushProvider("test-project", mockCredentials, client)
+        val provider = FcmPushProvider(testServiceAccountJson, mockCredentials, client)
         val result = provider.sendPush("user-1", "token-1", "Title", "Body")
 
         assertIs<PushResult.Success>(result)
@@ -138,7 +140,7 @@ class FcmPushProviderTest {
             install(ContentNegotiation) { json() }
         }
 
-        val provider = FcmPushProvider("test-project", mockCredentials, client)
+        val provider = FcmPushProvider(testServiceAccountJson, mockCredentials, client)
         val result = provider.sendPush("user-2", "token-2", "Title", "Body")
 
         assertIs<PushResult.PermanentFailure>(result)
@@ -161,7 +163,7 @@ class FcmPushProviderTest {
             install(ContentNegotiation) { json() }
         }
 
-        val provider = FcmPushProvider("test-project", mockCredentials, client)
+        val provider = FcmPushProvider(testServiceAccountJson, mockCredentials, client)
         val result = provider.sendPush("user-3", "token-3", "Title", "Body")
 
         assertIs<PushResult.PermanentFailure>(result)
@@ -184,7 +186,7 @@ class FcmPushProviderTest {
             install(ContentNegotiation) { json() }
         }
 
-        val provider = FcmPushProvider("test-project", mockCredentials, client)
+        val provider = FcmPushProvider(testServiceAccountJson, mockCredentials, client)
         val result = provider.sendPush("user-4", "token-4", "Title", "Body")
 
         assertIs<PushResult.TemporaryFailure>(result)
@@ -206,7 +208,7 @@ class FcmPushProviderTest {
             install(ContentNegotiation) { json() }
         }
 
-        val provider = FcmPushProvider("test-project", mockCredentials, client)
+        val provider = FcmPushProvider(testServiceAccountJson, mockCredentials, client)
         val result = provider.sendPush("user-5", "token-5", "Title", "Body")
 
         assertIs<PushResult.TemporaryFailure>(result)
@@ -225,7 +227,7 @@ class FcmPushProviderTest {
             install(ContentNegotiation) { json() }
         }
 
-        val provider = FcmPushProvider("test-project", mockCredentials, client)
+        val provider = FcmPushProvider(testServiceAccountJson, mockCredentials, client)
         val result = provider.sendPush("user-6", "token-6", "Title", "Body")
 
         assertIs<PushResult.TemporaryFailure>(result)

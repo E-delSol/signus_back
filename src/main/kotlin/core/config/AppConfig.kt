@@ -1,5 +1,8 @@
 package com.pecadoartesano.core.config
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+
 data class AppConfig(
     val jwt: JwtConfig,
     val database: DatabaseConfig,
@@ -12,9 +15,18 @@ data class TokenCleanupConfig(
 )
 
 data class FcmConfig(
-    val projectId: String,
     val serviceAccountJson: String
-)
+) {
+    /** Parse project_id from the service account JSON — single source of truth. */
+    val projectId: String by lazy {
+        val json = Json { ignoreUnknownKeys = true }
+        val sa = json.decodeFromString<ServiceAccountJson>(serviceAccountJson)
+        sa.project_id
+    }
+}
+
+@Serializable
+private data class ServiceAccountJson(val project_id: String)
 
 fun loadConfig(): AppConfig {
     val jwtConfig = JwtConfig(
@@ -37,7 +49,6 @@ fun loadConfig(): AppConfig {
     )
 
     val fcmConfig = FcmConfig(
-        projectId = System.getenv("FCM_PROJECT_ID") ?: error("fcmProjectId property not set"),
         serviceAccountJson = System.getenv("FCM_SERVICE_ACCOUNT_JSON") ?: error("fcmServiceAccountJson property not set")
     )
 

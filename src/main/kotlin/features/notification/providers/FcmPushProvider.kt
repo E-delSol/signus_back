@@ -17,7 +17,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.Serializable
 
 class FcmPushProvider(
-    private val projectId: String,
+    serviceAccountJson: String,
     private val credentials: GoogleCredentials,
     private val client: HttpClient = HttpClient {
         install(ContentNegotiation) {
@@ -25,6 +25,13 @@ class FcmPushProvider(
         }
     }
 ) : PushProvider {
+
+    /** Parse project_id from the service account JSON — single source of truth. */
+    private val projectId: String = run {
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        val sa = json.decodeFromString<ServiceAccountJson>(serviceAccountJson)
+        sa.project_id
+    }
 
     private val fcmEndpoint = "https://fcm.googleapis.com/v1/projects/$projectId/messages:send"
 
@@ -85,6 +92,10 @@ internal data class FcmV1Error(
     val status: String? = null,
     val message: String? = null
 )
+
+/** Minimal parser for the service account JSON — extracts only [projectId]. */
+@Serializable
+internal data class ServiceAccountJson(val project_id: String)
 
 /**
  * Pure function to parse an FCM v1 HTTP response body into a [PushResult].
