@@ -1,14 +1,54 @@
 package com.pecadoartesano.core.config
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import java.io.File
+
 data class AppConfig(
     val jwt: JwtConfig,
     val database: DatabaseConfig,
-    val fcm: FcmConfig
+    val fcm: FcmConfig,
+    val tokenCleanup: TokenCleanupConfig = TokenCleanupConfig()
+)
+
+data class TokenCleanupConfig(
+    val staleDays: Int = 30
 )
 
 data class FcmConfig(
-    val serverKey: String
-)
+    val serviceAccountJson: String
+) {
+    /** Parse project_id from the service account JSON — single source of truth. */
+    val projectId: String by lazy {
+        val json = Json { ignoreUnknownKeys = true }
+        val sa = json.decodeFromString<ServiceAccountJson>(serviceAccountJson)
+        sa.project_id
+    }
+}
+
+@Serializable
+private data class ServiceAccountJson(val project_id: String)
+
+fun resolveServiceAccountJson(): String {
+    val path = System.getenv("FCM_SERVICE_ACCOUNT_PATH")
+    if (path != null) {
+        val file = File(path)
+        if (!file.exists()) error("FCM_SERVICE_ACCOUNT_PATH: file not found at $path")
+        if (!file.isFile) error("FCM_SERVICE_ACCOUNT_PATH: not a regular file at $path")
+        if (!file.canRead()) error("FCM_SERVICE_ACCOUNT_PATH: file not readable at $path")
+        val content = file.readText()
+        if (content.isBlank()) error("FCM_SERVICE_ACCOUNT_PATH: file is empty at $path")
+        try {
+            val json = Json { ignoreUnknownKeys = true }
+            json.decodeFromString<ServiceAccountJson>(content)
+        } catch (e: Exception) {
+            error("FCM_SERVICE_ACCOUNT_PATH: invalid JSON in $path: ${e.message}")
+        }
+        return content
+    }
+    return System.getenv("FCM_SERVICE_ACCOUNT_JSON")
+        ?: error("FCM_SERVICE_ACCOUNT_JSON is not set. Set FCM_SERVICE_ACCOUNT_PATH or FCM_SERVICE_ACCOUNT_JSON.")
+}
 
 fun loadConfig(): AppConfig {
     val jwtConfig = JwtConfig(
@@ -16,8 +56,10 @@ fun loadConfig(): AppConfig {
         issuer = System.getenv("JWT_ISSUER") ?: error("issuer property not set"),
         audience = System.getenv("JWT_AUDIENCE") ?: error("audience property not set"),
         realm = System.getenv("JWT_REALM") ?: error("realm property not set"),
-        expiration = System.getenv("JWT_EXPIRATION_TIME")?.toLongOrNull()
-            ?: error("expiration property not set or invalid")
+        accessTokenExpiration = System.getenv("JWT_ACCESS_EXPIRATION_TIME")?.toLongOrNull()
+            ?: error("access token expiration property not set or invalid"),
+        refreshTokenExpiration = System.getenv("JWT_REFRESH_EXPIRATION_TIME")?.toLongOrNull()
+            ?: error("refresh token expiration property not set or invalid")
     )
 
     val databaseConfig = DatabaseConfig(
@@ -29,12 +71,17 @@ fun loadConfig(): AppConfig {
     )
 
     val fcmConfig = FcmConfig(
-        serverKey = System.getenv("FCM_SERVER_KEY") ?: error("fcmServerKey property not set")
+        serviceAccountJson = resolveServiceAccountJson()
+    )
+
+    val tokenCleanupConfig = TokenCleanupConfig(
+        staleDays = System.getenv("TOKEN_STALE_DAYS")?.toIntOrNull() ?: 30
     )
 
     return AppConfig(
         jwt = jwtConfig,
         database = databaseConfig,
-        fcm = fcmConfig
+        fcm = fcmConfig,
+        tokenCleanup = tokenCleanupConfig
     )
 }

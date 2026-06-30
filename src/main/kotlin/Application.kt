@@ -10,12 +10,14 @@ import com.pecadoartesano.core.plugins.configureSerialization
 import com.pecadoartesano.core.plugins.configureSockets
 import com.pecadoartesano.core.config.AppConfig
 import com.pecadoartesano.features.auth.ports.AuthService
+import com.pecadoartesano.features.devicetoken.DeviceTokenCleanupScheduler
 import com.pecadoartesano.features.devicetoken.ports.DeviceTokenService
 import com.pecadoartesano.features.linking.ports.LinkingService
 import com.pecadoartesano.features.notification.ports.RealtimeNotificationService
 import com.pecadoartesano.features.semaphore.ports.StatusService
 import com.pecadoartesano.features.user.ports.UserService
 import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationStopped
 import org.koin.core.module.Module
 import org.koin.ktor.ext.get
 
@@ -46,6 +48,12 @@ internal fun Application.configureApp(
     val linkingService: LinkingService = get()
     val userService: UserService = get()
     val deviceTokenService: DeviceTokenService = get()
+    val tokenCleanupScheduler: DeviceTokenCleanupScheduler = get()
+
+    tokenCleanupScheduler.start()
+    environment.monitor.subscribe(ApplicationStopped) {
+        tokenCleanupScheduler.stop()
+    }
 
     configureSecurity(appConfig.jwt)
     configureSockets()

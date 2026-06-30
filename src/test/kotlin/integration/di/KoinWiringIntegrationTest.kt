@@ -1,6 +1,7 @@
 package integration.di
 
 import com.pecadoartesano.configureApp
+import com.pecadoartesano.features.auth.AuthSessionTokens
 import com.pecadoartesano.features.auth.ports.AuthService
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -14,7 +15,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import support.decodeJson
 import support.testAppConfig
-import com.pecadoartesano.features.auth.dto.TokenResponse
+import com.pecadoartesano.features.auth.dto.AuthSessionResponse
 import org.koin.dsl.module as koinModule
 
 class KoinWiringIntegrationTest {
@@ -45,8 +46,15 @@ class KoinWiringIntegrationTest {
         // Given
         val appConfig = testAppConfig()
         val fakeAuthService = object : AuthService {
-            override fun register(email: String, rawPassword: String, displayName: String?): String = "token-register"
-            override fun login(email: String, rawPassword: String): String = "token-override"
+            override fun register(email: String, rawPassword: String, displayName: String?) =
+                AuthSessionTokens("token-register", "refresh-register")
+
+            override fun login(email: String, rawPassword: String) =
+                AuthSessionTokens("token-override", "refresh-override")
+
+            override fun refresh(refreshToken: String): String = "refreshed-token"
+
+            override fun logout(userId: String, refreshToken: String) = Unit
         }
 
         application {
@@ -69,7 +77,8 @@ class KoinWiringIntegrationTest {
 
         // Then
         assertEquals(HttpStatusCode.OK, response.status)
-        val body = decodeJson<TokenResponse>(response.bodyAsText())
+        val body = decodeJson<AuthSessionResponse>(response.bodyAsText())
         assertEquals("token-override", body.accessToken)
+        assertEquals("refresh-override", body.refreshToken)
     }
 }

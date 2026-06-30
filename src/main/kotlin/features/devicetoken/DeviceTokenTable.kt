@@ -14,6 +14,7 @@ object DeviceTokenTable : Table("user_device_tokens") {
     val updatedAt = long("updated_at")
     val lastRegisteredAt = long("last_registered_at")
     val deactivatedAt = long("deactivated_at").nullable()
+    val deactivationReason = varchar("deactivation_reason", 255).nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

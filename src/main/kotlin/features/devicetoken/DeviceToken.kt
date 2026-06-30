@@ -11,5 +11,6 @@ data class DeviceToken(
     val createdAt: Long,
     val updatedAt: Long,
     val lastRegisteredAt: Long,
-    val deactivatedAt: Long? = null
+    val deactivatedAt: Long? = null,
+    val deactivationReason: String? = null
 )

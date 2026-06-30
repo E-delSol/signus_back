@@ -3,7 +3,8 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
-
+.codex
+.kotlin/
 ### Environment ###
 .env
 
@@ -37,3 +38,15 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### AI / Dev Artifacts ###
+.atl/
+openspec/
+sdd/
+org/
+prompt_json.md
+NOTIFICATION_*.md
+PLAN_*.md
+
+### Secrets ###
+secrets/

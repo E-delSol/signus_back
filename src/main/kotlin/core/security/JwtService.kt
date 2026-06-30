@@ -11,14 +11,17 @@ class JwtService(
 ) {
     private val algorithm = Algorithm.HMAC256(config.secret)
 
-        fun generateToken(user: User): String {
-            val now = System.currentTimeMillis()
-            val exp = Date(now + config.expiration)
-            return JWT.create()
-                .withIssuer(config.issuer)
-                .withAudience(config.audience)
-                .withClaim("userId", user.id)
-                .withExpiresAt(exp)
-                .sign(algorithm)
-        }
+    fun generateToken(user: User): String =
+        generateAccessToken(user.id)
+
+    fun generateAccessToken(userId: String): String {
+        val now = System.currentTimeMillis()
+        val exp = Date(now + config.accessTokenExpiration)
+        return JWT.create()
+            .withIssuer(config.issuer)
+            .withAudience(config.audience)
+            .withClaim("userId", userId)
+            .withExpiresAt(exp)
+            .sign(algorithm)
+    }
 }
