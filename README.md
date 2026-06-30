@@ -96,6 +96,8 @@ If real-time delivery is not possible:
 
 👉 the backend **automatically falls back to push notifications via FCM**
 
+Since the migration to **FCM v1 with OAuth2**, the backend authenticates via a service account JSON file. Tokens that return permanent failures (`UNREGISTERED`, `INVALID_ARGUMENT`) are automatically deactivated; a background scheduler periodically cleans up stale tokens.
+
 ---
 
 ### Key design insight
@@ -216,7 +218,7 @@ Configure:
 
 * database credentials
 * JWT configuration
-* FCM server key
+* FCM service account path
 * port
 
 ---
@@ -262,6 +264,7 @@ Main domains:
 * Clear separation of concerns across layers
 * Explicit handling of connection vs delivery guarantees
 * WebSocket + FCM hybrid strategy
+* FCM v1 with OAuth2 and automatic token deactivation on permanent failures
 * Feature-based architecture for scalability
 * Backend-driven state consistency
 
