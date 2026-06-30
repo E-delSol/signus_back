@@ -2,6 +2,7 @@ package com.pecadoartesano.core.config
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.io.File
 
 data class AppConfig(
     val jwt: JwtConfig,
@@ -28,6 +29,27 @@ data class FcmConfig(
 @Serializable
 private data class ServiceAccountJson(val project_id: String)
 
+fun resolveServiceAccountJson(): String {
+    val path = System.getenv("FCM_SERVICE_ACCOUNT_PATH")
+    if (path != null) {
+        val file = File(path)
+        if (!file.exists()) error("FCM_SERVICE_ACCOUNT_PATH: file not found at $path")
+        if (!file.isFile) error("FCM_SERVICE_ACCOUNT_PATH: not a regular file at $path")
+        if (!file.canRead()) error("FCM_SERVICE_ACCOUNT_PATH: file not readable at $path")
+        val content = file.readText()
+        if (content.isBlank()) error("FCM_SERVICE_ACCOUNT_PATH: file is empty at $path")
+        try {
+            val json = Json { ignoreUnknownKeys = true }
+            json.decodeFromString<ServiceAccountJson>(content)
+        } catch (e: Exception) {
+            error("FCM_SERVICE_ACCOUNT_PATH: invalid JSON in $path: ${e.message}")
+        }
+        return content
+    }
+    return System.getenv("FCM_SERVICE_ACCOUNT_JSON")
+        ?: error("FCM_SERVICE_ACCOUNT_JSON is not set. Set FCM_SERVICE_ACCOUNT_PATH or FCM_SERVICE_ACCOUNT_JSON.")
+}
+
 fun loadConfig(): AppConfig {
     val jwtConfig = JwtConfig(
         secret = System.getenv("JWT_SECRET") ?: error("secret property not set"),
@@ -49,7 +71,7 @@ fun loadConfig(): AppConfig {
     )
 
     val fcmConfig = FcmConfig(
-        serviceAccountJson = System.getenv("FCM_SERVICE_ACCOUNT_JSON") ?: error("fcmServiceAccountJson property not set")
+        serviceAccountJson = resolveServiceAccountJson()
     )
 
     val tokenCleanupConfig = TokenCleanupConfig(

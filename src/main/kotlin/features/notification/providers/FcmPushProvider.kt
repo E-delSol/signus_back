@@ -37,6 +37,7 @@ class FcmPushProvider(
 
     override suspend fun sendPush(targetUserId: String, token: String, title: String, body: String): PushResult {
         return try {
+            credentials.refreshIfExpired()
             val accessToken = credentials.getAccessToken().tokenValue
             val response = client.post(fcmEndpoint) {
                 header(HttpHeaders.Authorization, "Bearer $accessToken")

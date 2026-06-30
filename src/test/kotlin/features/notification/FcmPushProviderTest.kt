@@ -104,6 +104,7 @@ class FcmPushProviderTest {
     @Test
     fun `given v1 200 with name when sendPush then returns Success`() = runTest {
         val mockCredentials = mockk<GoogleCredentials>()
+        every { mockCredentials.refreshIfExpired() } returns Unit
         every { mockCredentials.getAccessToken() } returns AccessToken("test-token", null)
 
         val mockEngine = MockEngine { _ ->
@@ -127,6 +128,7 @@ class FcmPushProviderTest {
     @Test
     fun `given v1 200 with missing name when sendPush then returns PermanentFailure`() = runTest {
         val mockCredentials = mockk<GoogleCredentials>()
+        every { mockCredentials.refreshIfExpired() } returns Unit
         every { mockCredentials.getAccessToken() } returns AccessToken("test-token", null)
 
         val mockEngine = MockEngine { _ ->
@@ -150,6 +152,7 @@ class FcmPushProviderTest {
     @Test
     fun `given v1 404 with UNREGISTERED when sendPush then returns PermanentFailure`() = runTest {
         val mockCredentials = mockk<GoogleCredentials>()
+        every { mockCredentials.refreshIfExpired() } returns Unit
         every { mockCredentials.getAccessToken() } returns AccessToken("test-token", null)
 
         val mockEngine = MockEngine { _ ->
@@ -173,6 +176,7 @@ class FcmPushProviderTest {
     @Test
     fun `given v1 503 with UNAVAILABLE when sendPush then returns TemporaryFailure`() = runTest {
         val mockCredentials = mockk<GoogleCredentials>()
+        every { mockCredentials.refreshIfExpired() } returns Unit
         every { mockCredentials.getAccessToken() } returns AccessToken("test-token", null)
 
         val mockEngine = MockEngine { _ ->
@@ -196,6 +200,7 @@ class FcmPushProviderTest {
     @Test
     fun `given token acquisition failure when sendPush then returns TemporaryFailure`() = runTest {
         val mockCredentials = mockk<GoogleCredentials>()
+        every { mockCredentials.refreshIfExpired() } returns Unit
         every { mockCredentials.getAccessToken() } throws RuntimeException("Invalid service account JSON")
 
         val client = HttpClient(MockEngine { _ ->
@@ -218,6 +223,7 @@ class FcmPushProviderTest {
     @Test
     fun `given network timeout when sendPush then returns TemporaryFailure`() = runTest {
         val mockCredentials = mockk<GoogleCredentials>()
+        every { mockCredentials.refreshIfExpired() } returns Unit
         every { mockCredentials.getAccessToken() } returns AccessToken("test-token", null)
 
         val mockEngine = MockEngine { _ ->

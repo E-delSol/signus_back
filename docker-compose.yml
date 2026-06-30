@@ -26,6 +26,8 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 5432
+    volumes:
+      - ./secrets/service-account.json:/run/secrets/firebase-service-account.json:ro
     networks:
       - signus_net
     ports:

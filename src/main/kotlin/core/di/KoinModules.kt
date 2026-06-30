@@ -112,6 +112,6 @@ fun appModules(appConfig: AppConfig): List<Module> = listOf(
         single<PushNotificationService> { PartnerPushNotificationService(get(), get(), get()) }
         single<NotificationMapper> { FcmNotificationMapper() }
         single<NotificationDispatcher> { NotificationDispatcherImpl(get(), get(), get()) }
-        single<StatusService> { StatusServiceImpl(get(), get()) }
+        single<StatusService> { StatusServiceImpl(get(), get(), get()) }
     }
 )
