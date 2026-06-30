@@ -38,3 +38,15 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### AI / Dev Artifacts ###
+.atl/
+openspec/
+sdd/
+org/
+prompt_json.md
+NOTIFICATION_*.md
+PLAN_*.md
+
+### Secrets ###
+secrets/
