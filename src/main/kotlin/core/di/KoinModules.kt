@@ -87,24 +87,28 @@ fun appModules(appConfig: AppConfig): List<Module> = listOf(
         single<RealtimeNotificationService> { RealtimeNotificationServiceImpl() }
         single<PushProvider> {
             val config = get<FcmConfig>()
-            val credentials = try {
-                GoogleCredentials.fromStream(
-                    ByteArrayInputStream(config.serviceAccountJson.toByteArray())
-                ).createScoped("https://www.googleapis.com/auth/firebase.messaging")
-            } catch (e: Exception) {
-                LoggerFactory.getLogger("KoinModules").warn(
-                    "Failed to initialize GoogleCredentials, using fallback provider", e
-                )
-                null
-            }
-            if (credentials != null) {
-                FcmPushProvider(serviceAccountJson = config.serviceAccountJson, credentials = credentials)
+            val serviceAccountJson = config.serviceAccountJson
+            val credentials = if (serviceAccountJson != null) {
+                try {
+                    GoogleCredentials.fromStream(
+                        ByteArrayInputStream(serviceAccountJson.toByteArray())
+                    ).createScoped("https://www.googleapis.com/auth/firebase.messaging")
+                } catch (e: Exception) {
+                    LoggerFactory.getLogger("KoinModules").warn(
+                        "Failed to initialize GoogleCredentials, using fallback provider", e
+                    )
+                    null
+                }
+            } else null
+            if (credentials != null && serviceAccountJson != null) {
+                FcmPushProvider(serviceAccountJson = serviceAccountJson, credentials = credentials)
             } else {
+                LoggerFactory.getLogger("KoinModules").info("FCM not configured, using no-op push provider")
                 object : PushProvider {
                     override suspend fun sendPush(
                         targetUserId: String, token: String, title: String, body: String
                     ): PushResult = PushResult.TemporaryFailure(
-                        token = token, reason = "credentials_init_error", errorCode = "CREDENTIALS_ERROR"
+                        token = token, reason = "fcm_not_configured", errorCode = "FCM_DISABLED"
                     )
                 }
             }
