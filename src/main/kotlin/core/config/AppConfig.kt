@@ -16,20 +16,22 @@ data class TokenCleanupConfig(
 )
 
 data class FcmConfig(
-    val serviceAccountJson: String
+    val serviceAccountJson: String?
 ) {
     /** Parse project_id from the service account JSON — single source of truth. */
-    val projectId: String by lazy {
-        val json = Json { ignoreUnknownKeys = true }
-        val sa = json.decodeFromString<ServiceAccountJson>(serviceAccountJson)
-        sa.project_id
+    val projectId: String? by lazy {
+        serviceAccountJson?.let { json ->
+            val parser = Json { ignoreUnknownKeys = true }
+            val sa = parser.decodeFromString<ServiceAccountJson>(json)
+            sa.project_id
+        }
     }
 }
 
 @Serializable
 private data class ServiceAccountJson(val project_id: String)
 
-fun resolveServiceAccountJson(): String {
+fun resolveServiceAccountJson(): String? {
     val path = System.getenv("FCM_SERVICE_ACCOUNT_PATH")
     if (path != null) {
         val file = File(path)
@@ -47,7 +49,6 @@ fun resolveServiceAccountJson(): String {
         return content
     }
     return System.getenv("FCM_SERVICE_ACCOUNT_JSON")
-        ?: error("FCM_SERVICE_ACCOUNT_JSON is not set. Set FCM_SERVICE_ACCOUNT_PATH or FCM_SERVICE_ACCOUNT_JSON.")
 }
 
 fun loadConfig(): AppConfig {
