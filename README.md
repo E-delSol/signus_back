@@ -25,6 +25,7 @@ Signus is structured as a multi-repository system:
 * [signus_app](https://github.com/E-delSol/signus_app) — Android client
 * signus_back — Backend API (this repository)
 * [signus_infra](https://github.com/E-delSol/signus_infra) — Infrastructure and deployment
+* [signus_landing](https://github.com/E-delSol/signus_landing) — Landing page
 
 ---
 
