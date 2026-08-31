@@ -27,7 +27,7 @@ Signus is structured as a multi-repository system:
 * [signus_infra](https://github.com/E-delSol/signus_infra) — Infrastructure and deployment
 * [signus_landing](https://github.com/E-delSol/signus_landing) — Landing page
 
-🌐 **Live:** [edelsol.github.io/signus_landing](https://edelsol.github.io/signus_landing/)
+🌐 **Live:** [e-delsol.github.io/signus_landing](https://e-delsol.github.io/signus_landing/)
 
 ---
 
